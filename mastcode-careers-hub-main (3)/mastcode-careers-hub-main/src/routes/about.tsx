@@ -1,5 +1,5 @@
 ﻿import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Flame, Target, Users } from "lucide-react";
+import { ArrowRight, Flame, Target } from "lucide-react";
 
 import { PageHero, SiteFooter, SiteNav } from "@/components/site-chrome";
 import { Reveal } from "@/components/Reveal";
@@ -43,17 +43,6 @@ function AboutPage() {
                 <h2 className="mt-5 font-display text-2xl font-semibold">Our mission</h2>
                 <p className="mt-4 leading-relaxed text-muted-foreground">
                   To empower individuals and organizations with the skills, guidance, technology, and opportunities needed to grow confidently in a rapidly changing world.
-                </p>
-              </article>
-            </Reveal>
-            <Reveal delay={120}>
-              <article className="rounded-lg border border-border bg-card p-8">
-                <Users className="h-7 w-7 text-accent" />
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">Leadership</p>
-                <h2 className="mt-4 font-display text-2xl font-semibold">Rakshitha S</h2>
-                <p className="mt-1 text-sm text-primary">Founder & CEO</p>
-                <p className="mt-4 leading-relaxed text-muted-foreground">
-                  Leading MastCode with a learner-first vision and a commitment to turning education into tangible career and business momentum.
                 </p>
               </article>
             </Reveal>

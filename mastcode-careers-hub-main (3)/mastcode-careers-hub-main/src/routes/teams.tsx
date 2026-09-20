@@ -7,7 +7,6 @@ import { Reveal } from "@/components/Reveal";
 import { SafeImage } from "@/components/SafeImage";
 import { teamMembersQuery } from "@/lib/queries";
 import { socialMeta } from "@/lib/site";
-import { ASSETS } from "@/lib/assets";
 
 export const Route = createFileRoute("/teams")({
   loader: ({ context }) => context.queryClient.ensureQueryData(teamMembersQuery()),
@@ -25,18 +24,7 @@ export const Route = createFileRoute("/teams")({
 
 function TeamsPage() {
   const { data: members } = useSuspenseQuery(teamMembersQuery());
-  const visibleMembers = members.length > 0 ? members : [
-    {
-      id: "founder",
-      name: "Rakshitha S",
-      role: "Founder & CEO",
-      bio: "Building MastCode with a vision to bridge technology education, practical experience, and real career opportunities.",
-      photo_path: ASSETS.CEO_PHOTO,
-      linkedin: null,
-      github: null,
-      published: true,
-    },
-  ];
+  const visibleMembers = members;
 
   return (
     <>

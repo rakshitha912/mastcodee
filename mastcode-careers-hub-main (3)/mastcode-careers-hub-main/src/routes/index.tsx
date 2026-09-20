@@ -21,7 +21,6 @@ import {
   Users,
   X,
   Instagram,
-  Linkedin,
 } from "lucide-react";
 import { ASSETS } from "@/lib/assets";
 import { teamMembersQuery } from "@/lib/queries";
@@ -790,61 +789,6 @@ function Testimonials() {
   );
 }
 
-function CEOSection() {
-  return (
-    <section className="mx-auto max-w-7xl px-6 py-24">
-      <div className="grid gap-12 md:grid-cols-2 md:items-center">
-        <div className="relative">
-          <div className="relative overflow-hidden rounded-2xl border-2 border-accent/30">
-            <SafeImage
-              src={ASSETS.CEO_PHOTO}
-              alt="Rakshitha S — Founder & CEO"
-              fallbackLabel="Rakshitha S"
-              loading="lazy"
-              containerClassName="h-96 w-full"
-              className="relative z-10 h-96 w-full bg-secondary/50 object-contain object-center"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.25em] text-accent">Meet our founder</p>
-            <h2 className="mt-3 font-display text-4xl font-bold md:text-5xl">Rakshitha S</h2>
-            <p className="mt-2 text-lg font-medium text-primary">Founder & CEO</p>
-          </div>
-
-          <p className="text-lg leading-relaxed text-muted-foreground">
-            “MastCode was created with a vision to help students, professionals, educational institutions, and businesses unlock new opportunities through the right skills, guidance, technology, and growth strategies.”
-          </p>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Focus</p>
-              <p className="mt-2 font-semibold">Growth & Skills</p>
-            </div>
-            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Mission</p>
-              <p className="mt-2 font-semibold">Career & Business Growth</p>
-            </div>
-          </div>
-
-          <a
-            href="https://www.linkedin.com/in/rakshitha-s-619496247/"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg bg-accent px-6 py-3 font-semibold text-accent-foreground transition-all hover:brightness-110"
-          >
-            <Star className="h-5 w-5" />
-            Connect on LinkedIn
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function TeamPreview() {
   const { data: members } = useSuspenseQuery(teamMembersQuery());
   const preview = members.slice(0, 3);
@@ -1015,9 +959,6 @@ function BookCallSection() {
             <div className="mt-8">
               <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Connect on social media</p>
               <div className="flex gap-3">
-                <a href="https://www.linkedin.com/in/rakshitha-s-619496247/" target="_blank" rel="noreferrer" aria-label="Rakshitha S LinkedIn" className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-white text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary">
-                  <Linkedin className="h-5 w-5" />
-                </a>
                 <a href="https://www.instagram.com/srakshitha_21/" target="_blank" rel="noreferrer" aria-label="Instagram" className="flex h-11 w-11 items-center justify-center rounded-lg border border-border bg-white text-muted-foreground transition hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary">
                   <Instagram className="h-5 w-5" />
                 </a>
@@ -1124,7 +1065,6 @@ function Index() {
         <BusinessesSection />
         <MastCodeGallery />
         <Testimonials />
-        <CEOSection />
         <TeamPreview />
         <BookCallSection />
         <FinalCta />
