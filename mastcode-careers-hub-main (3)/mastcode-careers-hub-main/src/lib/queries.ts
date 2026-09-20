@@ -291,6 +291,7 @@ export const teamMembersQuery = () =>
         .from("team_members")
         .select("*")
         .eq("published", true)
+        .not("role", "ilike", "%co-founder%")
         .order("display_order"),
         [],
       ),
