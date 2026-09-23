@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { PageHero, SiteFooter, SiteNav } from "@/components/site-chrome";
 import { Reveal } from "@/components/Reveal";
-import { coursesQuery } from "@/lib/queries";
+import { coursesQuery, getCoursePrice } from "@/lib/queries";
 import { socialMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/courses")({
@@ -151,16 +151,7 @@ function CoursesPage() {
                   </div>
                   <div className="relative mt-5 flex items-center justify-between border-t border-border pt-5">
                     <span className="font-display text-lg font-bold text-foreground">
-                      {c.discount_price ? (
-                        <>
-                          {c.discount_price.toLocaleString("en-IN")} {" "}
-                          <s className="text-sm font-normal text-muted-foreground">
-                            {c.price.toLocaleString("en-IN")}
-                          </s>
-                        </>
-                      ) : (
-                        <>{c.price.toLocaleString("en-IN")}</>
-                      )}
+                      {getCoursePrice(c).toLocaleString("en-IN")}
                     </span>
                     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
                       View Course{" "}

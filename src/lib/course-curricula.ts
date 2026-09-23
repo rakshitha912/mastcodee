@@ -13,6 +13,100 @@ export interface CourseMonth {
   weeks: CourseWeek[];
 }
 
+export interface CourseDay {
+  day: number;
+  phase: string;
+  title: string;
+  topics: string[];
+  practicalTask?: string;
+  assignment?: string;
+  miniProject?: string;
+  expectedOutcome: string;
+}
+
+export interface CourseWeekReport {
+  week: number;
+  startDay: number;
+  endDay: number;
+  phase: string;
+  title: string;
+  topics: string[];
+  practicalTasks: string[];
+  assignments: string[];
+  miniProjects: string[];
+  outcomes: string[];
+}
+
+const intensive90DayPhases = [
+  { start: 1, end: 30, label: "Days 1-30: Foundation + Core Development" },
+  { start: 31, end: 60, label: "Days 31-60: Advanced Development + Full-Stack Skills" },
+  { start: 61, end: 75, label: "Days 61-75: Advanced Concepts + Real-World Development" },
+  { start: 76, end: 85, label: "Days 76-85: Major Project + Deployment + Testing" },
+  { start: 86, end: 90, label: "Days 86-90: Resume + Mock Interviews + Placement Preparation" },
+];
+
+function phaseForDay(day: number) {
+  return intensive90DayPhases.find((phase) => day >= phase.start && day <= phase.end)?.label ?? intensive90DayPhases[0].label;
+}
+
+function splitTopics(topics: string[], parts: number) {
+  return Array.from({ length: parts }, (_, index) => {
+    const start = Math.floor((index * topics.length) / parts);
+    const end = Math.floor(((index + 1) * topics.length) / parts);
+    return topics.slice(start, Math.max(end, start + 1));
+  });
+}
+
+export function compressCurriculumTo90Days(curriculum: CourseMonth[]): CourseDay[] {
+  const weeks = curriculum.flatMap((month) => month.weeks);
+  const days: CourseDay[] = [];
+  let dayNumber = 1;
+
+  weeks.forEach((week, weekIndex) => {
+    const daysForWeek = weekIndex % 4 === 3 ? 3 : 4;
+    const topicGroups = splitTopics(week.topics, daysForWeek);
+
+    topicGroups.forEach((topics, dayIndex) => {
+      const isWeekEnd = dayIndex === topicGroups.length - 1;
+      days.push({
+        day: dayNumber,
+        phase: phaseForDay(dayNumber),
+        title: `${week.title}${daysForWeek > 1 ? ` - Intensive Day ${dayIndex + 1} of ${daysForWeek}` : ""}`,
+        topics,
+        practicalTask: isWeekEnd ? week.practicalTask : undefined,
+        assignment: isWeekEnd ? week.assignment : undefined,
+        miniProject: isWeekEnd ? week.miniProject : undefined,
+        expectedOutcome: isWeekEnd ? week.expectedOutcome : `Build toward the ${week.expectedOutcome.toLowerCase()}`,
+      });
+      dayNumber += 1;
+    });
+  });
+
+  return days;
+}
+
+export function group90DayCurriculumByWeek(days: CourseDay[]): CourseWeekReport[] {
+  const reports: CourseWeekReport[] = [];
+
+  for (let index = 0; index < days.length; index += 7) {
+    const weekDays = days.slice(index, index + 7);
+    reports.push({
+      week: reports.length + 1,
+      startDay: weekDays[0].day,
+      endDay: weekDays[weekDays.length - 1].day,
+      phase: weekDays[0].phase,
+      title: Array.from(new Set(weekDays.map((day) => day.title.replace(/ - Intensive Day \d+ of \d+$/, "")))).join(" + "),
+      topics: weekDays.flatMap((day) => day.topics),
+      practicalTasks: weekDays.flatMap((day) => day.practicalTask ? [day.practicalTask] : []),
+      assignments: weekDays.flatMap((day) => day.assignment ? [day.assignment] : []),
+      miniProjects: weekDays.flatMap((day) => day.miniProject ? [day.miniProject] : []),
+      outcomes: Array.from(new Set(weekDays.map((day) => day.expectedOutcome))),
+    });
+  }
+
+  return reports;
+}
+
 export const fullStackCurriculum: CourseMonth[] = [
   {
     month: 1,

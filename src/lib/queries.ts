@@ -6,6 +6,22 @@ export type Course = Database["public"]["Tables"]["courses"]["Row"];
 export type Internship = Database["public"]["Tables"]["internships"]["Row"];
 export type Job = Database["public"]["Tables"]["jobs"]["Row"];
 
+const standardCoursePriceSlugs = new Set([
+  "full-stack-development",
+  "machine-learning",
+  "python-programming",
+  "artificial-intelligence",
+  "cloud-computing",
+  "data-analytics",
+  "data-analysis",
+  "web-development",
+  "sql-database-management",
+]);
+
+export function getCoursePrice(course: Pick<Course, "slug" | "price">) {
+  return standardCoursePriceSlugs.has(course.slug) ? 3000 : course.price;
+}
+
 function logPublicDataError(source: string, error: unknown) {
   console.warn(`[Public data] ${source} unavailable; rendering fallback content.`, error);
 }

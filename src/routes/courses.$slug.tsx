@@ -10,7 +10,6 @@ import {
   GitCommitHorizontal,
   GitPullRequest,
   GraduationCap,
-  Languages,
   Mail,
   Merge,
   Network,
@@ -22,7 +21,7 @@ import { useState } from "react";
 
 import { SiteFooter, SiteNav } from "@/components/site-chrome";
 import { Reveal } from "@/components/Reveal";
-import { fullStackCurriculum } from "@/lib/course-curricula";
+import { compressCurriculumTo90Days, fullStackCurriculum, group90DayCurriculumByWeek, type CourseWeekReport } from "@/lib/course-curricula";
 import { dataAnalysisCurriculum } from "@/lib/data-analysis-curriculum";
 import { machineLearningCurriculum } from "@/lib/machine-learning-curriculum";
 import { artificialIntelligenceCurriculum } from "@/lib/artificial-intelligence-curriculum";
@@ -30,7 +29,7 @@ import { cloudComputingCurriculum } from "@/lib/cloud-computing-curriculum";
 import { gitGithubCurriculum } from "@/lib/git-github-curriculum";
 import { sqlDataManagementCurriculum } from "@/lib/sql-data-management-curriculum";
 import { webDevelopmentCurriculum } from "@/lib/web-development-curriculum";
-import { courseQuery, courseWeeksQuery, type CourseWeek } from "@/lib/queries";
+import { courseQuery, courseWeeksQuery, getCoursePrice, type CourseWeek } from "@/lib/queries";
 import { socialMeta } from "@/lib/site";
 import { submitJsonForm } from "@/lib/form-submit";
 
@@ -323,32 +322,32 @@ const pythonCurriculum = [
 ];
 
 const pythonCurriculumDownload = `MastCode - Python Programming
-6 Months | 24 Weeks | Beginner to Advanced
+Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
 
 ${pythonCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
 
 const fullStackCurriculumDownload = `MastCode - Full Stack Development
-6 Months | 24 Weeks | Beginner to Advanced
+Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
 
 ${fullStackCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
 
 const dataAnalysisCurriculumDownload = `MastCode - Data Analysis
-6 Months | 24 Weeks | Beginner to Advanced
+Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
 
 ${dataAnalysisCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
 
 const machineLearningCurriculumDownload = `MastCode - Machine Learning
-6 Months | 24 Weeks | Beginner to Advanced
+Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
 
 ${machineLearningCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
 
 const artificialIntelligenceCurriculumDownload = `MastCode - Artificial Intelligence
-6 Months | 24 Weeks | Beginner to Advanced
+Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
 
 ${artificialIntelligenceCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
 
 const cloudComputingCurriculumDownload = `MastCode - Cloud Computing
-6 Months | 24 Weeks | Beginner to Advanced
+Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
 
 ${cloudComputingCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
 
@@ -363,7 +362,7 @@ const sqlDataManagementCurriculumDownload = `MastCode - SQL & Data Management Sy
 ${sqlDataManagementCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
 
 const webDevelopmentCurriculumDownload = `MastCode - Web Development
-6 Months | 24 Weeks | Beginner to Advanced
+Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
 
 ${webDevelopmentCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
 
@@ -372,8 +371,6 @@ function CourseDetail() {
   const { data } = useSuspenseQuery(courseQuery(slug));
   const c = data!;
   const { data: storedWeeks } = useSuspenseQuery(courseWeeksQuery(c.id));
-  const [expandedMonth, setExpandedMonth] = useState<number | null>(null);
-  const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
   const [enrollmentSubmitted, setEnrollmentSubmitted] = useState(false);
   const [enrollmentSubmitting, setEnrollmentSubmitting] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState("");
@@ -419,6 +416,7 @@ function CourseDetail() {
                   ? webDevelopmentCurriculum
                   : fullStackCurriculum;
   const curriculum = storedWeeks.length > 0 ? courseWeeksToMonths(storedWeeks) : fallbackCurriculum;
+  const intensiveWeeks = group90DayCurriculumByWeek(compressCurriculumTo90Days(curriculum));
   const curriculumDownload = isPythonCourse
     ? pythonCurriculumDownload
     : isDataAnalysisCourse
@@ -443,33 +441,33 @@ function CourseDetail() {
           icon: GraduationCap,
           text: isGitGithubCourse ? "Beginner to Intermediate" : "Beginner to Advanced",
         },
-        ...(isFullStackCourse ? [{ icon: Languages, text: "Training + Practical Projects" }] : []),
+        ...(isFullStackCourse ? [{ icon: null, text: "Training + Practical Projects" }] : []),
         ...(isDataAnalysisCourse
-          ? [{ icon: Languages, text: "Excel | SQL | Python | Power BI" }]
+          ? [{ icon: null, text: "Excel | SQL | Python | Power BI" }]
           : []),
         ...(isMachineLearningCourse
-          ? [{ icon: Languages, text: "Python | Scikit-learn | TensorFlow | NLP" }]
+          ? [{ icon: null, text: "Python | Scikit-learn | TensorFlow | NLP" }]
           : []),
         ...(isArtificialIntelligenceCourse
-          ? [{ icon: Languages, text: "Python | GenAI | LLMs | RAG | AI Agents" }]
+          ? [{ icon: null, text: "Python | GenAI | LLMs | RAG | AI Agents" }]
           : []),
         ...(isCloudComputingCourse
-          ? [{ icon: Languages, text: "AWS | Azure | Linux | Docker | Kubernetes" }]
+          ? [{ icon: null, text: "AWS | Azure | Linux | Docker | Kubernetes" }]
           : []),
         ...(isGitGithubCourse
-          ? [{ icon: Languages, text: "Git | GitHub | Branching | Collaboration" }]
+          ? [{ icon: null, text: "Git | GitHub | Branching | Collaboration" }]
           : []),
         ...(isSqlCourse
-          ? [{ icon: Languages, text: "SQL | MySQL | PostgreSQL | DBMS" }]
+          ? [{ icon: null, text: "SQL | MySQL | PostgreSQL | DBMS" }]
           : []),
         ...(isWebDevelopmentCourse
-          ? [{ icon: Languages, text: "HTML | CSS | JavaScript | React | Node.js" }]
+          ? [{ icon: null, text: "HTML | CSS | JavaScript | React | Node.js" }]
           : []),
       ]
     : [
         { icon: Clock, text: c.duration },
         { icon: GraduationCap, text: c.level },
-        { icon: Languages, text: c.language },
+        { icon: null, text: c.language },
         ...(c.instructor ? [{ icon: UserRound, text: c.instructor }] : []),
       ];
 
@@ -511,7 +509,7 @@ function CourseDetail() {
                               ? "Learn Git and GitHub from the fundamentals to professional project collaboration. Manage code, track changes, collaborate with teams, resolve conflicts, and maintain portfolio-ready projects."
                               : isSqlCourse
                                 ? "Learn SQL and Database Management Systems from the fundamentals to advanced database development. This program covers database design, queries, normalization, security, optimization, and real-world projects."
-                                : "Learn modern web development from the fundamentals to building and deploying complete full-stack web applications. Students will complete practical projects and a final full-stack capstone."}
+                                : "Learn modern web development from the fundamentals to building and deploying complete full-stack web applications through the complete 6-month curriculum delivered as an intensive 90-day program."}
               </p>
             </Reveal>
             <Reveal delay={160} className="mt-8 flex flex-wrap gap-3">
@@ -520,7 +518,7 @@ function CourseDetail() {
                   key={m.text}
                   className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm transition-transform duration-300 hover:-translate-y-0.5"
                 >
-                  <m.icon className="h-4 w-4 text-accent" /> {m.text}
+                  {m.icon && <m.icon className="h-4 w-4 text-accent" />} {m.text}
                 </span>
               ))}
             </Reveal>
@@ -567,13 +565,8 @@ function CourseDetail() {
           <Reveal delay={120}>
             <aside className="sticky top-24 rounded-xl border border-border bg-card p-7">
               <p className="font-display text-3xl font-bold">
-                {(c.discount_price ?? c.price).toLocaleString("en-IN")}
+                {getCoursePrice(c).toLocaleString("en-IN")}
               </p>
-              {c.discount_price && (
-                <p className="mt-1 text-sm text-muted-foreground line-through">
-                  {c.price.toLocaleString("en-IN")}
-                </p>
-              )}
               {enrollmentSubmitted ? (
                 <p className="mt-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">Your enrollment request was saved successfully. Our team will contact you shortly.</p>
               ) : (
@@ -619,26 +612,12 @@ function CourseDetail() {
           <section className="mx-auto max-w-5xl space-y-10 px-6 pb-16">
             <Reveal>
               <h2 className="font-display text-3xl font-bold">
-                {isGitGithubCourse ? "1-Month / 4-Week Curriculum" : "6-Month / 24-Week Curriculum"}
+                {isGitGithubCourse ? "1-Month / 4-Week Curriculum" : "Complete 6-Month Curriculum — Intensive 90-Day Program"}
               </h2>
               <p className="mt-2 text-muted-foreground">
-                {isPythonCourse
-                  ? "A practical week-by-week path from Python fundamentals to portfolio and interview readiness."
-                  : isFullStackCourse
-                    ? "A practical path from web fundamentals to a deployed full-stack capstone project."
-                    : isDataAnalysisCourse
-                      ? "A practical path from Excel and SQL foundations to business intelligence, dashboards, and a portfolio-ready analytics capstone."
-                      : isMachineLearningCourse
-                        ? "A practical path from Python fundamentals to deployed machine learning and AI projects."
-                        : isArtificialIntelligenceCourse
-                          ? "A practical path from AI fundamentals to deployed generative AI and agent projects."
-                          : isCloudComputingCourse
-                            ? "A practical path from cloud fundamentals to automated, secure, production-ready infrastructure."
-                            : isSqlCourse
-                              ? "A practical path from database fundamentals to optimized, secure, real-world DBMS projects."
-                              : isWebDevelopmentCourse
-                                ? "A practical path from HTML and CSS fundamentals to a deployed full-stack capstone."
-                                : "A practical path from local commits to collaborative, portfolio-ready GitHub projects."}
+                {isGitGithubCourse
+                  ? "A practical path from local commits to collaborative, portfolio-ready GitHub projects."
+                  : "The complete existing curriculum compressed into an intensive 90-day program and presented as a week-wise report. Every original module, topic, practical task, project, assessment, deployment activity, and placement outcome is retained."}
               </p>
             </Reveal>
             {isGitGithubCourse && (
@@ -729,95 +708,7 @@ function CourseDetail() {
               </Reveal>
             )}
             <div className="space-y-6">
-              {curriculum.map((month) => (
-                <Reveal key={month.month}>
-                  <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-colors hover:border-primary/40">
-                    <button
-                      type="button"
-                      aria-expanded={expandedMonth === month.month}
-                      onClick={() => {
-                        const nextMonth = expandedMonth === month.month ? null : month.month;
-                        setExpandedMonth(nextMonth);
-                        setExpandedWeek(null);
-                      }}
-                      className="flex w-full items-center justify-between border-b border-border px-6 py-5 text-left transition-colors hover:bg-primary/5"
-                    >
-                      <div>
-                        <h3 className="font-display text-xl font-semibold">
-                          Month {month.month} - {month.monthName}
-                        </h3>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Weeks {(month.month - 1) * 4 + 1} - {month.month * 4}
-                        </p>
-                      </div>
-                      <ChevronDown
-                        className={`h-5 w-5 text-accent transition-transform duration-300 ${expandedMonth === month.month ? "rotate-180" : ""}`}
-                      />
-                    </button>
-                    <div
-                      className={`grid transition-[grid-template-rows] duration-500 ease-out ${expandedMonth === month.month ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-                    >
-                      <div className="min-h-0 overflow-hidden">
-                        <div className="divide-y divide-border">
-                          {month.weeks.map((week, weekIndex) => {
-                            const weekNumber = (month.month - 1) * 4 + weekIndex + 1;
-                            const isExpanded = expandedWeek === weekNumber;
-                            return (
-                              <div key={weekNumber}>
-                                <button
-                                  type="button"
-                                  aria-expanded={isExpanded}
-                                  onClick={() => setExpandedWeek(isExpanded ? null : weekNumber)}
-                                  className="flex w-full items-center justify-between px-6 py-4 text-left transition-colors hover:bg-card/80"
-                                >
-                                  <div>
-                                    <h4 className="font-semibold">
-                                      Week {weekNumber}: {week.title}
-                                    </h4>
-                                    {!isExpanded && (
-                                      <p className="mt-1 text-sm text-muted-foreground">
-                                        {week.topics.join(" | ")}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <ChevronDown
-                                    className={`ml-4 h-5 w-5 shrink-0 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                                  />
-                                </button>
-                                {isExpanded && (
-                                  <div className="animate-fade-in space-y-4 border-t border-border bg-secondary px-6 py-5">
-                                    <div>
-                                      <h5 className="text-sm font-semibold">Topics</h5>
-                                      <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                                        {week.topics.map((topic) => (
-                                          <li key={topic}>- {topic}</li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                    <CurriculumDetail
-                                      label="Practical Task"
-                                      value={week.practicalTask}
-                                    />
-                                    <CurriculumDetail label="Assignment" value={week.assignment} />
-                                    <CurriculumDetail
-                                      label="Mini Project"
-                                      value={week.miniProject}
-                                    />
-                                    <CurriculumDetail
-                                      label="Expected Outcome"
-                                      value={week.expectedOutcome}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
+              {intensiveWeeks.map((week) => <WeeklyCurriculumItem key={week.week} week={week} />)}
             </div>
             <Reveal className="flex flex-wrap gap-3 pt-2">
               <a
@@ -845,6 +736,58 @@ function CourseDetail() {
       </main>
       <SiteFooter />
     </>
+  );
+}
+
+function WeeklyCurriculumItem({ week }: { week: CourseWeekReport }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <Reveal>
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-colors hover:border-primary/40">
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((current) => !current)}
+          className="flex w-full items-center justify-between px-6 py-5 text-left transition-colors hover:bg-primary/5"
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">{week.phase}</p>
+            <h3 className="mt-1 font-display text-xl font-semibold">Week {week.week}: Days {week.startDay}-{week.endDay}</h3>
+            <p className="mt-1 text-sm font-medium text-foreground">{week.title}</p>
+            {!expanded && <p className="mt-1 text-sm text-muted-foreground">{week.topics.join(" | ")}</p>}
+          </div>
+          <ChevronDown className={`ml-4 h-5 w-5 shrink-0 text-accent transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+        {expanded && (
+          <div className="animate-fade-in space-y-4 border-t border-border bg-secondary px-6 py-5">
+            <div>
+              <h4 className="text-sm font-semibold">Topics</h4>
+              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                {week.topics.map((topic, index) => <li key={`${topic}-${index}`}>- {topic}</li>)}
+              </ul>
+            </div>
+            <CurriculumListDetail label="Practical Tasks" values={week.practicalTasks} />
+            <CurriculumListDetail label="Assignments" values={week.assignments} />
+            <CurriculumListDetail label="Mini Projects" values={week.miniProjects} />
+            <CurriculumListDetail label="Expected Outcomes" values={week.outcomes} />
+          </div>
+        )}
+      </div>
+    </Reveal>
+  );
+}
+
+function CurriculumListDetail({ label, values }: { label: string; values: string[] }) {
+  if (values.length === 0) return null;
+
+  return (
+    <div>
+      <h4 className="text-sm font-semibold">{label}</h4>
+      <ul className="mt-1 space-y-1 text-sm text-muted-foreground">
+        {values.map((value, index) => <li key={`${label}-${index}`}>{value}</li>)}
+      </ul>
+    </div>
   );
 }
 

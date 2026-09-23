@@ -89,14 +89,7 @@ function TrainingProgramsPage() {
                   </div>
                   <div className="relative mt-5 flex items-center justify-between border-t border-border pt-5">
                     <span className="font-display text-lg font-bold text-foreground">
-                      {p.discount_price ? (
-                        <>
-                          Rs {p.discount_price.toLocaleString("en-IN")}{" "}
-                          <s className="text-sm font-normal text-muted-foreground">Rs {p.price?.toLocaleString("en-IN")}</s>
-                        </>
-                      ) : (
-                        <>Rs {p.price?.toLocaleString("en-IN") || "Contact"}</>
-                      )}
+                      Rs {p.price?.toLocaleString("en-IN") || "Contact"}
                     </span>
                     <ArrowRight className="h-4 w-4 text-primary transition-transform duration-300 group-hover:translate-x-1" />
                   </div>

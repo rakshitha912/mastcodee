@@ -25,7 +25,7 @@ export type ServicePage = {
   successMessage: string;
 };
 
-export const servicePages: Record<ServiceType, ServicePage> = {
+export const DEFAULT_SERVICE_PAGES: Record<ServiceType, ServicePage> = {
   career_counselling: {
     type: "career_counselling",
     eyebrow: "Career Counselling & Guidance",
@@ -161,4 +161,44 @@ export const servicePages: Record<ServiceType, ServicePage> = {
     successMessage: "Your Digital Marketing Consultation Request has been submitted successfully. Our team will contact you shortly.",
   },
 };
+
+export const servicePages = DEFAULT_SERVICE_PAGES;
+
+export async function fetchServicePageConfig(type: ServiceType): Promise<ServicePage> {
+  const response = await fetch(`/api/service-pages?type=${encodeURIComponent(type)}`, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: ServicePage; error?: string } | null;
+
+  if (!response.ok || !result?.ok || !result.data) {
+    return DEFAULT_SERVICE_PAGES[type];
+  }
+
+  return result.data;
+}
+
+export async function saveServicePageConfig(page: Partial<ServicePage>) {
+  const response = await fetch("/api/service-pages", {
+    method: "PUT",
+    headers: {
+      "content-type": "application/json",
+      Accept: "application/json",
+    },
+    cache: "no-store",
+    body: JSON.stringify(page),
+  });
+
+  const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: ServicePage; error?: string } | null;
+
+  if (!response.ok || !result?.ok || !result.data) {
+    throw new Error(result?.error || "Unable to save the service page.");
+  }
+
+  return result.data;
+}
 

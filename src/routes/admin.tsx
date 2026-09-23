@@ -23,6 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { isSuperAdmin } from "@/lib/admin-auth";
 import { AdminGuard } from "@/components/AdminGuard";
+import { DEFAULT_SERVICE_PAGES, fetchServicePageConfig, saveServicePageConfig, type ServicePage, type ServiceType } from "@/lib/service-pages";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -46,6 +47,7 @@ const AdminTabs = [
   { id: "courses", label: "Courses", icon: BookOpen },
   { id: "internships", label: "Internships", icon: Briefcase },
   { id: "curriculum", label: "Curriculum", icon: ListChecks },
+  { id: "service-pages", label: "Service Pages", icon: Pencil },
   { id: "training-programs", label: "Training Programs", icon: Briefcase },
   { id: "teams", label: "Teams", icon: Users },
 ] as const;
@@ -189,6 +191,7 @@ function AdminLayout() {
           {activeTab === "courses" && <CoursesTab />}
           {activeTab === "internships" && <InternshipsTab />}
           {activeTab === "curriculum" && <CurriculumTab />}
+          {activeTab === "service-pages" && <ServicePagesTab />}
           {activeTab === "training-programs" && <TrainingProgramsTab />}
           {activeTab === "teams" && <TeamsTab />}
         </div>
@@ -819,6 +822,187 @@ function CurriculumTab() {
             </button>
           </div>
         </form>
+      )}
+    </div>
+  );
+}
+
+function ServicePagesTab() {
+  const [selectedType, setSelectedType] = useState<ServiceType>("career_counselling");
+  const [page, setPage] = useState<ServicePage>(DEFAULT_SERVICE_PAGES.career_counselling);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const loadPage = async (type: ServiceType) => {
+    setLoading(true);
+    setMessage("");
+    try {
+      const next = await fetchServicePageConfig(type);
+      setPage(next);
+    } catch (error) {
+      setPage(DEFAULT_SERVICE_PAGES[type]);
+      setMessage(error instanceof Error ? error.message : "Unable to load service page data.");
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void loadPage(selectedType);
+  }, [selectedType]);
+
+  const updateTextField = (field: keyof ServicePage, value: string) => {
+    setPage((current) => ({ ...current, [field]: value }));
+  };
+
+  const updateParagraph = (index: number, value: string) => {
+    setPage((current) => ({
+      ...current,
+      paragraphs: current.paragraphs.map((paragraph, paragraphIndex) => paragraphIndex === index ? value : paragraph),
+    }));
+  };
+
+  const updateFieldLabel = (index: number, value: string) => {
+    setPage((current) => ({
+      ...current,
+      fields: current.fields.map((field, fieldIndex) => fieldIndex === index ? { ...field, label: value } : field),
+    }));
+  };
+
+  const addParagraph = () => {
+    setPage((current) => ({ ...current, paragraphs: [...current.paragraphs, ""] }));
+  };
+
+  const addField = () => {
+    setPage((current) => ({
+      ...current,
+      fields: [...current.fields, { name: `new_field_${current.fields.length + 1}`, label: "New field label" }],
+    }));
+  };
+
+  const savePage = async () => {
+    setSaving(true);
+    setMessage("");
+    try {
+      const saved = await saveServicePageConfig(page);
+      setPage(saved);
+      setMessage("Service page updated successfully. Public pages will use the latest version.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to save changes.");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display text-2xl font-bold">Manage Service Pages</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Edit the public-facing service page copy and form fields. Changes are saved to the database and used by the public website immediately.</p>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <label className="block text-sm font-medium text-muted-foreground">Service page</label>
+        <select
+          value={selectedType}
+          onChange={(event) => setSelectedType(event.target.value as ServiceType)}
+          className="mt-2 w-full rounded-lg border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+        >
+          {Object.keys(DEFAULT_SERVICE_PAGES).map((type) => (
+            <option key={type} value={type}>
+              {type.replaceAll("_", " ")}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {message && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {message}
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-muted-foreground">Loading service page...</p>
+      ) : (
+        <div className="space-y-6">
+          <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Eyebrow</span>
+                <input value={page.eyebrow} onChange={(event) => updateTextField("eyebrow", event.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Price</span>
+                <input value={page.price ?? ""} onChange={(event) => updateTextField("price", event.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+              </label>
+            </div>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Title</span>
+              <input value={page.title} onChange={(event) => updateTextField("title", event.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+            </label>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Paragraphs</span>
+                <button type="button" onClick={addParagraph} className="rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-secondary">Add paragraph</button>
+              </div>
+              {page.paragraphs.map((paragraph, index) => (
+                <textarea
+                  key={`${page.type}-paragraph-${index}`}
+                  value={paragraph}
+                  onChange={(event) => updateParagraph(index, event.target.value)}
+                  rows={4}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                />
+              ))}
+            </div>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Submit label</span>
+              <input value={page.submitLabel} onChange={(event) => updateTextField("submitLabel", event.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Success message</span>
+              <textarea value={page.successMessage} onChange={(event) => updateTextField("successMessage", event.target.value)} rows={3} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
+            </label>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display text-xl font-semibold">Form fields</h3>
+              <button type="button" onClick={addField} className="rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-primary hover:bg-secondary">Add field</button>
+            </div>
+
+            {page.fields.map((field, index) => (
+              <div key={`${page.type}-field-${index}`} className="rounded-lg border border-border bg-background p-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Field name</span>
+                    <input value={field.name} onChange={(event) => setPage((current) => ({ ...current, fields: current.fields.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item) }))} className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Label</span>
+                    <input value={field.label} onChange={(event) => updateFieldLabel(index, event.target.value)} className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+                  </label>
+                </div>
+                <div className="mt-3 flex gap-3">
+                  <button type="button" onClick={() => setPage((current) => ({ ...current, fields: current.fields.filter((_, itemIndex) => itemIndex !== index) }))} className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Remove</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void savePage()}
+            disabled={saving}
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving ? "Saving..." : "Save Service Page"}
+          </button>
+        </div>
       )}
     </div>
   );

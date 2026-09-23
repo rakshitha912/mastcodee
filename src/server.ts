@@ -2,7 +2,8 @@
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
-import { handleMysqlFormSubmission } from "./lib/mysql-forms.server";
+import { handleServicePagesRequest } from "./lib/service-pages.server";
+import { handleSupabaseFormSubmission } from "./lib/supabase-forms.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -50,7 +51,10 @@ export default {
     try {
       const url = new URL(request.url);
       if (url.pathname === "/api/form-submissions") {
-        return await handleMysqlFormSubmission(request);
+        return await handleSupabaseFormSubmission(request);
+      }
+      if (url.pathname === "/api/service-pages") {
+        return await handleServicePagesRequest(request);
       }
 
       const handler = await getServerEntry();
