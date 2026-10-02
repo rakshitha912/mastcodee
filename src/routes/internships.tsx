@@ -72,8 +72,14 @@ function InternshipsPage() {
                 <Link
                   to="/internships/$slug"
                   params={{ slug: it.slug }}
-                  className="group flex h-full flex-col rounded-xl border border-border bg-card p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
+                  className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
                 >
+                  {it.thumbnail_path && (
+                    <div className="aspect-[16/8] overflow-hidden bg-secondary">
+                      <img src={it.thumbnail_path} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none" />
+                    </div>
+                  )}
+                  <div className="flex flex-1 flex-col p-7">
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{it.department}</span>
                     {it.featured && <Sparkles className="h-4 w-4 animate-flame-pulse text-accent" />}
@@ -83,11 +89,12 @@ function InternshipsPage() {
                   <div className="mt-5 flex flex-wrap gap-4 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{it.location} - {it.work_mode}</span>
                     <span className="inline-flex items-center gap-1.5"><CalendarClock className="h-3.5 w-3.5" />{it.duration}</span>
-                    <span className="inline-flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" />Unpaid</span>
+                    <span className="inline-flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" />{it.stipend || "Unpaid"}</span>
                   </div>
                   <span className="mt-6 inline-flex items-center gap-2 border-t border-border pt-5 text-sm font-semibold text-primary">
                     View internship <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </span>
+                  </div>
                 </Link>
               </Reveal>
             ))}

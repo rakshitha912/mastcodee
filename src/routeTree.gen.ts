@@ -19,6 +19,7 @@ import { Route as InstitutionPartnershipsRouteImport } from './routes/institutio
 import { Route as InternshipsRouteImport } from './routes/internships'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as PlacementAssistanceRouteImport } from './routes/placement-assistance'
+import { Route as RecruitmentServicesRouteImport } from './routes/recruitment-services'
 import { Route as TeamsRouteImport } from './routes/teams'
 import { Route as TrainingProgramsRouteImport } from './routes/training-programs'
 import { Route as WebsiteDevelopmentRouteImport } from './routes/website-development'
@@ -79,6 +80,11 @@ const PlacementAssistanceRoute = PlacementAssistanceRouteImport.update({
   path: '/placement-assistance',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecruitmentServicesRoute = RecruitmentServicesRouteImport.update({
+  id: '/recruitment-services',
+  path: '/recruitment-services',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeamsRoute = TeamsRouteImport.update({
   id: '/teams',
   path: '/teams',
@@ -136,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/internships': typeof InternshipsRouteWithChildren
   '/jobs': typeof JobsRouteWithChildren
   '/placement-assistance': typeof PlacementAssistanceRoute
+  '/recruitment-services': typeof RecruitmentServicesRoute
   '/teams': typeof TeamsRoute
   '/training-programs': typeof TrainingProgramsRouteWithChildren
   '/website-development': typeof WebsiteDevelopmentRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
   '/internships': typeof InternshipsRouteWithChildren
   '/jobs': typeof JobsRouteWithChildren
   '/placement-assistance': typeof PlacementAssistanceRoute
+  '/recruitment-services': typeof RecruitmentServicesRoute
   '/teams': typeof TeamsRoute
   '/training-programs': typeof TrainingProgramsRouteWithChildren
   '/website-development': typeof WebsiteDevelopmentRoute
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   '/internships': typeof InternshipsRouteWithChildren
   '/jobs': typeof JobsRouteWithChildren
   '/placement-assistance': typeof PlacementAssistanceRoute
+  '/recruitment-services': typeof RecruitmentServicesRoute
   '/teams': typeof TeamsRoute
   '/training-programs': typeof TrainingProgramsRouteWithChildren
   '/website-development': typeof WebsiteDevelopmentRoute
@@ -202,6 +211,7 @@ export interface FileRouteTypes {
     | '/internships'
     | '/jobs'
     | '/placement-assistance'
+    | '/recruitment-services'
     | '/teams'
     | '/training-programs'
     | '/website-development'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/internships'
     | '/jobs'
     | '/placement-assistance'
+    | '/recruitment-services'
     | '/teams'
     | '/training-programs'
     | '/website-development'
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/internships'
     | '/jobs'
     | '/placement-assistance'
+    | '/recruitment-services'
     | '/teams'
     | '/training-programs'
     | '/website-development'
@@ -266,6 +278,7 @@ export interface RootRouteChildren {
   InternshipsRoute: typeof InternshipsRouteWithChildren
   JobsRoute: typeof JobsRouteWithChildren
   PlacementAssistanceRoute: typeof PlacementAssistanceRoute
+  RecruitmentServicesRoute: typeof RecruitmentServicesRoute
   TeamsRoute: typeof TeamsRoute
   TrainingProgramsRoute: typeof TrainingProgramsRouteWithChildren
   WebsiteDevelopmentRoute: typeof WebsiteDevelopmentRoute
@@ -343,6 +356,13 @@ declare module '@tanstack/react-router' {
       path: '/placement-assistance'
       fullPath: '/placement-assistance'
       preLoaderRoute: typeof PlacementAssistanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recruitment-services': {
+      id: '/recruitment-services'
+      path: '/recruitment-services'
+      fullPath: '/recruitment-services'
+      preLoaderRoute: typeof RecruitmentServicesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/teams': {
@@ -466,6 +486,7 @@ const rootRouteChildren: RootRouteChildren = {
   InternshipsRoute: InternshipsRouteWithChildren,
   JobsRoute: JobsRouteWithChildren,
   PlacementAssistanceRoute: PlacementAssistanceRoute,
+  RecruitmentServicesRoute: RecruitmentServicesRoute,
   TeamsRoute: TeamsRoute,
   TrainingProgramsRoute: TrainingProgramsRouteWithChildren,
   WebsiteDevelopmentRoute: WebsiteDevelopmentRoute,

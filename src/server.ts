@@ -51,7 +51,7 @@ export default {
     try {
       const url = new URL(request.url);
       if (url.pathname === "/api/form-submissions") {
-        return await handleSupabaseFormSubmission(request);
+        return await handleSupabaseFormSubmission(request, env);
       }
       if (url.pathname === "/api/service-pages") {
         return await handleServicePagesRequest(request);

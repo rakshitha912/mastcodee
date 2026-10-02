@@ -6,7 +6,7 @@ import { useState } from "react";
 import { SiteFooter, SiteNav } from "@/components/site-chrome";
 import { Reveal } from "@/components/Reveal";
 import { submitMultipartForm } from "@/lib/form-submit";
-import { internshipQuery } from "@/lib/queries";
+import { applicationFormQuery, internshipQuery } from "@/lib/queries";
 import { socialMeta } from "@/lib/site";
 
 export const Route = createFileRoute("/internships/$slug")({
@@ -36,7 +36,9 @@ export const Route = createFileRoute("/internships/$slug")({
 function InternshipDetail() {
   const { slug } = Route.useParams();
   const { data } = useSuspenseQuery(internshipQuery(slug));
+  const { data: applicationForm } = useSuspenseQuery(applicationFormQuery("internship_application"));
   const it = data!;
+  const applicationFee = Number(it.application_fee ?? 2000).toLocaleString("en-IN");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
@@ -46,7 +48,7 @@ function InternshipDetail() {
     { title: "Responsibilities", body: it.responsibilities },
     { title: "Requirements", body: it.requirements },
     { title: "Eligibility", body: it.eligibility },
-  ].filter((b) => b.body?.trim());
+  ].filter((b) => (b.body ?? "").trim());
 
   return (
     <>
@@ -67,7 +69,7 @@ function InternshipDetail() {
               {[
                 { icon: MapPin, text: `${it.location} - ${it.work_mode}` },
                 { icon: CalendarClock, text: it.duration },
-                { icon: Wallet, text: "Unpaid" },
+                { icon: Wallet, text: it.stipend || "Unpaid" },
                 { icon: GraduationCap, text: it.experience_level },
               ].map((m) => (
                 <span key={m.text} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm transition-transform duration-300 hover:-translate-y-0.5">
@@ -75,6 +77,11 @@ function InternshipDetail() {
                 </span>
               ))}
             </Reveal>
+            {it.thumbnail_path && (
+              <Reveal delay={200} className="mt-8 overflow-hidden rounded-xl border border-border">
+                <img src={it.thumbnail_path} alt={`${it.title} internship`} loading="eager" decoding="async" className="max-h-80 w-full object-cover" />
+              </Reveal>
+            )}
             <Reveal delay={220}>
               <a
                 href="#application-form"
@@ -91,14 +98,14 @@ function InternshipDetail() {
             <div className="rounded-xl border border-accent/40 bg-accent/10 p-6">
               <h2 className="font-display text-2xl font-semibold">Internship terms</h2>
               <p className="mt-3 leading-relaxed text-muted-foreground">
-                This is an unpaid internship. Based on performance, selected interns may receive a full-time employment offer.
+                Stipend: {it.stipend || "Unpaid"}. Based on performance, selected interns may receive a full-time employment offer.
               </p>
               <div className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
                 <span className="inline-flex items-center gap-2 text-foreground"><FileText className="h-4 w-4 text-accent" />Offer letter</span>
                 <span className="inline-flex items-center gap-2 text-foreground"><BadgeCheck className="h-4 w-4 text-accent" />Completion certificate</span>
               </div>
               <p className="mt-5 border-t border-border/70 pt-4 text-sm text-muted-foreground">
-                Document processing fee: <strong className="text-foreground">Rs 2,000</strong> for the internship offer letter and completion certificate. The internship itself is unpaid.
+                Document processing fee: <strong className="text-foreground">Rs {applicationFee}</strong> for the internship offer letter and completion certificate.
               </p>
             </div>
           </Reveal>
@@ -117,7 +124,7 @@ function InternshipDetail() {
             <Reveal key={b.title} delay={i * 100}>
               <h2 className="font-display text-2xl font-semibold">{b.title}</h2>
               <ul className="mt-4 space-y-3 leading-relaxed text-muted-foreground">
-                {b.body.split("\n").filter(Boolean).map((line, k) => (
+                {String(b.body ?? "").split("\n").filter(Boolean).map((line, k) => (
                   <li key={k} className="flex gap-3">
                     <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                     {line.replace(/^[--]\s*/, "")}
@@ -144,7 +151,7 @@ function InternshipDetail() {
                 }
 
                 form.set("form_type", "internship_application");
-                form.set("full_name", String(form.get("name") || ""));
+                form.set("full_name", String(form.get("full_name") || form.get("name") || ""));
                 form.set("position_id", it.id);
                 form.set("position_slug", it.slug);
                 form.set("position_title", it.title);
@@ -161,32 +168,33 @@ function InternshipDetail() {
                 setSubmitting(false);
               }}
             >
-              <h2 className="font-display text-2xl font-semibold">Apply for this internship</h2>
-              <p className="mt-2 text-sm text-muted-foreground">Share your name, phone number, email, and resume. The Rs 2,000 document processing fee covers the offer letter and completion certificate.</p>
+              <h2 className="font-display text-2xl font-semibold">{applicationForm.title}</h2>
+              <p className="mt-2 text-sm text-muted-foreground">{applicationForm.description} Document processing fee: Rs {applicationFee} for the offer letter and completion certificate.</p>
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
-                <label className="space-y-1.5 text-sm font-medium">
-                  Full name
-                  <input name="name" required placeholder="Your full name" className="w-full rounded-lg border border-border bg-background px-4 py-3 font-normal outline-none focus:border-accent" />
-                </label>
-                <label className="space-y-1.5 text-sm font-medium">
-                  Email address
-                  <input name="email" type="email" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$" placeholder="you@gmail.com" title="Enter a valid email such as you@gmail.com" className="w-full rounded-lg border border-border bg-background px-4 py-3 font-normal outline-none focus:border-accent" />
-                </label>
-                <label className="space-y-1.5 text-sm font-medium">
-                  Phone number
-                  <input name="phone" type="tel" required inputMode="tel" pattern="[0-9+()\s-]{7,20}" placeholder="7019161991" title="Enter a valid phone number" className="w-full rounded-lg border border-border bg-background px-4 py-3 font-normal outline-none focus:border-accent" />
-                </label>
-                <label className="space-y-1.5 text-sm font-medium">
-                  Resume
-                  <span className="flex cursor-pointer items-center rounded-lg border border-border bg-background px-4 py-3 font-normal text-muted-foreground transition hover:border-accent">
-                    <span className="truncate">{resumeName || "Choose PDF/DOC resume"}</span>
-                    <input name="resume" type="file" required accept=".pdf,.doc,.docx" className="sr-only" onChange={(event) => setResumeName(event.target.files?.[0]?.name || "")} />
-                  </span>
-                </label>
+                {applicationForm.fields.map((field) => (
+                  <label key={field.name} className="space-y-1.5 text-sm font-medium">
+                    {field.label}
+                    {field.type === "file" ? (
+                      <span className="flex cursor-pointer items-center rounded-lg border border-border bg-background px-4 py-3 font-normal text-muted-foreground transition hover:border-accent">
+                        <span className="truncate">{field.name === "resume" ? resumeName || field.placeholder || `Choose ${field.label}` : field.placeholder || `Choose ${field.label}`}</span>
+                        <input name={field.name} type="file" required={field.required} accept={field.name === "resume" ? ".pdf,.doc,.docx" : undefined} className="sr-only" onChange={(event) => { if (field.name === "resume") setResumeName(event.target.files?.[0]?.name || ""); }} />
+                      </span>
+                    ) : field.type === "textarea" ? (
+                      <textarea name={field.name} required={field.required} placeholder={field.placeholder} rows={3} className="w-full rounded-lg border border-border bg-background px-4 py-3 font-normal outline-none focus:border-accent" />
+                    ) : field.type === "select" ? (
+                      <select name={field.name} required={field.required} className="w-full rounded-lg border border-border bg-background px-4 py-3 font-normal outline-none focus:border-accent">
+                        <option value="">Select an option</option>
+                        {(field.options ?? []).map((option) => <option key={option}>{option}</option>)}
+                      </select>
+                    ) : (
+                      <input name={field.name} type={field.type} required={field.required} placeholder={field.placeholder} pattern={field.name === "phone" ? "[0-9+()\\s-]{7,20}" : undefined} inputMode={field.name === "phone" ? "tel" : undefined} className="w-full rounded-lg border border-border bg-background px-4 py-3 font-normal outline-none focus:border-accent" />
+                    )}
+                  </label>
+                ))}
               </div>
-              <button type="submit" disabled={submitting || submitted} className="mt-5 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">{submitting ? "Submitting..." : submitted ? "Application submitted" : "Submit application"}</button>
+              <button type="submit" disabled={submitting || submitted} className="mt-5 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">{submitting ? "Submitting..." : submitted ? "Application submitted" : applicationForm.submitLabel}</button>
               {submitError && <p className="mt-3 text-sm text-red-400">{submitError}</p>}
-              {submitted && <p className="mt-3 text-sm text-accent">Application submitted successfully. Your resume was uploaded and saved for review.</p>}
+              {submitted && <p className="mt-3 text-sm text-accent">{applicationForm.successMessage}</p>}
             </form>
           </Reveal>
         </section>

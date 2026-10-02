@@ -57,7 +57,7 @@ function JobDetail() {
     { title: "Responsibilities", body: j.responsibilities },
     { title: "Requirements", body: j.requirements },
     { title: "Benefits", body: j.benefits },
-  ].filter((b) => b.body?.trim());
+  ].filter((b) => (b.body ?? "").trim());
 
   return (
     <>
@@ -112,7 +112,7 @@ function JobDetail() {
             <Reveal key={b.title} delay={i * 100}>
               <h2 className="font-display text-2xl font-semibold">{b.title}</h2>
               <ul className="mt-4 space-y-3 leading-relaxed text-muted-foreground">
-                {b.body.split("\n").filter(Boolean).map((line, k) => (
+                {String(b.body ?? "").split("\n").filter(Boolean).map((line, k) => (
                   <li key={k} className="flex gap-3">
                     <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
                     {line.replace(/^[--]\s*/, "")}

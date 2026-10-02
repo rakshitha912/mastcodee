@@ -37,7 +37,7 @@ export function ServicePage({ page, type }: { page?: ServicePageConfig; type?: S
     <main className="min-h-screen bg-background">
       <section className="border-b border-border bg-secondary">
         <div className="relative mx-auto max-w-7xl px-6 py-16 md:py-24">
-          <Link to="/#services" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground">
+          <Link to="/" hash="services" className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Back to Services
           </Link>
           <div className="mt-14 max-w-4xl">

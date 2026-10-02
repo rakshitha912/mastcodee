@@ -43,6 +43,7 @@ function TrainingProgramDetail() {
   const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
 
   const p = program!;
+  const programDescription = String(p.full_description ?? p.short_description ?? p.description ?? "");
 
   // Group weeks by month
   const monthsData = Array.from({ length: 6 }, (_, i) => {
@@ -68,7 +69,7 @@ function TrainingProgramDetail() {
             </Reveal>
             <Reveal delay={80}>
               <h1 className="mt-6 font-display text-4xl font-bold leading-tight md:text-5xl">{p.title}</h1>
-              <p className="mt-5 max-w-3xl text-lg leading-relaxed text-muted-foreground">{p.full_description || p.short_description || p.description}</p>
+              <p className="mt-5 max-w-3xl text-lg leading-relaxed text-muted-foreground">{programDescription}</p>
             </Reveal>
             <Reveal delay={160} className="mt-8 flex flex-wrap gap-3">
               {[
@@ -134,7 +135,7 @@ function TrainingProgramDetail() {
                               <div>
                                 <h5 className="font-semibold text-sm">Topics</h5>
                                 <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                                  {week.topics.split("\n").filter(Boolean).map((topic: string, i: number) => (
+                                  {String(week.topics ?? "").split("\n").filter(Boolean).map((topic: string, i: number) => (
                                     <li key={i} className="flex gap-2">
                                       <span className="text-accent">-</span>
                                       <span>{topic.replace(/^[--]\s*/, "")}</span>

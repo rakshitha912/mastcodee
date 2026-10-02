@@ -1,5 +1,6 @@
 ﻿import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
 import {
   LayoutGrid,
   BookOpen,
@@ -21,9 +22,11 @@ import {
   Eye,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { isSuperAdmin } from "@/lib/admin-auth";
+import type { Database, Json } from "@/integrations/supabase/types";
+import { getCurrentUser, isSuperAdmin, logout as logoutAdmin } from "@/lib/admin-auth";
 import { AdminGuard } from "@/components/AdminGuard";
 import { DEFAULT_SERVICE_PAGES, fetchServicePageConfig, saveServicePageConfig, type ServicePage, type ServiceType } from "@/lib/service-pages";
+import { DEFAULT_APPLICATION_FORMS, getLocalApplicationForm, getManagedCourses, saveLocalApplicationForm, saveManagedCourses, type ApplicationFormConfig, type ApplicationFormField, type ApplicationFormType, type Course } from "@/lib/queries";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -41,20 +44,19 @@ function AdminRoute() {
 }
 
 const AdminTabs = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutGrid },
-  { id: "applications", label: "Applications", icon: FileSpreadsheet },
-  { id: "service-submissions", label: "Service Enquiries", icon: ClipboardList },
+  { id: "inquiries", label: "Inquiries", icon: ClipboardList },
   { id: "courses", label: "Courses", icon: BookOpen },
   { id: "internships", label: "Internships", icon: Briefcase },
   { id: "curriculum", label: "Curriculum", icon: ListChecks },
   { id: "service-pages", label: "Service Pages", icon: Pencil },
+  { id: "application-forms", label: "Application Forms", icon: ClipboardList },
   { id: "training-programs", label: "Training Programs", icon: Briefcase },
   { id: "teams", label: "Teams", icon: Users },
 ] as const;
 
 function AdminLayout() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("inquiries");
   const [isOpen, setIsOpen] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -73,9 +75,7 @@ function AdminLayout() {
       setLoginNotice(notice);
       localStorage.removeItem("mastcode-login-banner");
 
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
+      const authUser = await getCurrentUser();
       setUser(authUser || { email: localStorage.getItem("mastcode-admin-name") || "Rakshitha S" });
       setIsAuthorized(true);
       setLoading(false);
@@ -85,7 +85,7 @@ function AdminLayout() {
   }, [navigate]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await logoutAdmin();
     await navigate({ to: "/" });
   };
 
@@ -185,13 +185,12 @@ function AdminLayout() {
               {loginNotice}
             </div>
           )}
-          {activeTab === "dashboard" && <DashboardTab />}
-          {activeTab === "applications" && <ApplicationsTab />}
-          {activeTab === "service-submissions" && <ServiceSubmissionsTab />}
+          {activeTab === "inquiries" && <InquiriesTab />}
           {activeTab === "courses" && <CoursesTab />}
           {activeTab === "internships" && <InternshipsTab />}
           {activeTab === "curriculum" && <CurriculumTab />}
           {activeTab === "service-pages" && <ServicePagesTab />}
+          {activeTab === "application-forms" && <ApplicationFormsTab />}
           {activeTab === "training-programs" && <TrainingProgramsTab />}
           {activeTab === "teams" && <TeamsTab />}
         </div>
@@ -208,6 +207,123 @@ function AdminLayout() {
   );
 }
 
+ type Inquiry = Database["public"]["Tables"]["messages"]["Row"];
+
+ function inquiryFields(inquiry: Inquiry): Record<string, Json> {
+   try {
+     const fields: unknown = JSON.parse(inquiry.message);
+     if (fields && typeof fields === "object" && !Array.isArray(fields)) {
+       return fields as Record<string, Json>;
+     }
+  } catch {}
+
+   return {
+     name: inquiry.name,
+     email: inquiry.email,
+     subject: inquiry.subject,
+     message: inquiry.message,
+   };
+ }
+
+function inquiryValue(value: Json): string {
+  return typeof value === "string" ? value : JSON.stringify(value) ?? String(value);
+}
+
+function isSupabaseConfigured() {
+  const url = import.meta.env?.VITE_SUPABASE_URL || process.env?.SUPABASE_URL;
+  const key = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY || process.env?.SUPABASE_PUBLISHABLE_KEY;
+  return Boolean(url && key);
+}
+
+function InquiriesTab() {
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [query, setQuery] = useState("");
+
+  const loadInquiries = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage("");
+    if (!isSupabaseConfigured()) {
+      setInquiries([]);
+      setLoading(false);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setInquiries(data || []);
+    } catch (error) {
+      setInquiries([]);
+      setErrorMessage(error instanceof Error ? error.message : "Unable to load inquiries.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadInquiries();
+  }, [loadInquiries]);
+
+  const visibleInquiries = inquiries.filter((inquiry) => {
+    const fields = inquiryFields(inquiry);
+    return JSON.stringify(fields).toLowerCase().includes(query.toLowerCase());
+  });
+
+  return (
+    <section className="space-y-5" aria-labelledby="inquiries-heading">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <div>
+          <h2 id="inquiries-heading" className="font-display text-2xl font-bold">Inquiries</h2>
+          <p className="mt-1 text-sm text-muted-foreground">All website form submissions, newest first.</p>
+        </div>
+        <button type="button" onClick={() => void loadInquiries()} className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-secondary">
+          Refresh
+        </button>
+      </div>
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search submitted fields..."
+        aria-label="Search inquiries"
+        className="w-full rounded-md border border-input bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+      />
+      {errorMessage && <p role="alert" className="rounded-md border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">{errorMessage}</p>}
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading inquiries...</p>
+      ) : visibleInquiries.length ? (
+        <div className="space-y-3">
+          {visibleInquiries.map((inquiry) => (
+            <details key={inquiry.id} className="rounded-md border border-border bg-card p-4">
+              <summary className="cursor-pointer font-medium">
+                <span>{String(inquiryFields(inquiry)["full_name"] ?? inquiry.name ?? "Website submission")}</span>
+                <time className="ml-3 text-sm font-normal text-muted-foreground" dateTime={inquiry.created_at}>
+                  {new Date(inquiry.created_at).toLocaleString()}
+                </time>
+              </summary>
+              <dl className="mt-4 grid gap-x-6 gap-y-3 border-t border-border pt-4 sm:grid-cols-2">
+                {Object.entries(inquiryFields(inquiry)).map(([name, value]) => (
+                  <div key={name} className="min-w-0">
+                    <dt className="text-xs font-semibold uppercase text-muted-foreground">{name.replaceAll("_", " ")}</dt>
+                    <dd className="mt-1 whitespace-pre-wrap break-words text-sm">{inquiryValue(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-md border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+          {query ? "No inquiries match your search." : "No inquiries have been submitted yet."}
+        </p>
+      )}
+    </section>
+  );
+}
+
 // Dashboard Tab
 function DashboardTab() {
   const [stats, setStats] = useState({
@@ -220,13 +336,15 @@ function DashboardTab() {
     newResponses: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const loadStats = async () => {
+      setErrorMessage("");
       try {
         const [serviceRows, applicationRows] = await Promise.all([
-          fetchMysqlForms("services") as Promise<Array<{ service_type: string; status: string }>>,
-          fetchMysqlForms("applications") as Promise<Array<{ id: string; status: string }>>,
+          fetchInquiryRows("services") as Promise<Array<{ service_type: string; status: string }>>,
+          fetchInquiryRows("applications") as Promise<Array<{ id: string; status: string }>>,
         ]);
 
         setStats({
@@ -238,6 +356,8 @@ function DashboardTab() {
           marketing: serviceRows.filter((item) => item.service_type === "digital_marketing").length,
           newResponses: serviceRows.filter((item) => item.status === "New").length + applicationRows.filter((item) => item.status === "Applied").length,
         });
+      } catch (error) {
+        setErrorMessage(error instanceof Error ? error.message : "Unable to load dashboard statistics.");
       } finally {
         setLoading(false);
       }
@@ -250,6 +370,7 @@ function DashboardTab() {
     <div className="space-y-6">
       <h2 className="font-display text-2xl font-bold">Dashboard</h2>
 
+      {errorMessage && <p role="alert" className="rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700">Dashboard statistics are unavailable without a database connection.</p>}
       {loading ? (
         <p className="text-muted-foreground">Loading stats...</p>
       ) : (
@@ -300,35 +421,55 @@ function csvCell(value: unknown) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
 }
 
-async function fetchMysqlForms(kind: "all" | "applications" | "services" = "all") {
-  const response = await fetch(`/api/form-submissions?kind=${kind}`);
-  const result = (await response.json().catch(() => null)) as { ok?: boolean; data?: unknown[]; error?: string } | null;
-  if (!response.ok || !result?.ok) {
-    throw new Error(result?.error || "Unable to load form submissions.");
-  }
-  return result.data || [];
+async function fetchInquiryRows(kind: "all" | "applications" | "services" = "all") {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+
+  const records = (data || []).map((inquiry) => {
+    const fields = inquiryFields(inquiry);
+    const value = (key: string) => fields[key] == null ? "" : String(fields[key]);
+    const formType = value("form_type") || value("service_type");
+    const isApplication = formType === "job_application" || formType === "internship_application";
+    return {
+      id: inquiry.id,
+      service_type: formType,
+      form_type: formType,
+      full_name: value("full_name") || value("name") || value("contact_person"),
+      email: value("email"),
+      phone: value("phone"),
+      status: isApplication ? "Applied" : "New",
+      resume_path: null,
+      created_at: inquiry.created_at,
+      position_title: value("position_title"),
+      location: value("location"),
+      qualification: value("qualification"),
+      skills: value("skills"),
+      experience: value("experience"),
+      linkedin: value("linkedin"),
+      github: value("github"),
+      portfolio: value("portfolio"),
+      cover_letter: value("cover_letter"),
+      payload: fields,
+    };
+  });
+
+  return kind === "applications"
+    ? records.filter((record) => record.form_type === "job_application" || record.form_type === "internship_application")
+    : kind === "services"
+      ? records.filter((record) => record.form_type !== "job_application" && record.form_type !== "internship_application")
+      : records;
 }
 
-async function updateMysqlFormStatus(id: string, status: string) {
-  const response = await fetch("/api/form-submissions", {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id, status }),
-  });
-  const result = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-  if (!response.ok || !result?.ok) {
-    throw new Error(result?.error || "Unable to update status.");
-  }
+async function updateInquiryStatus(_id: string, _status: string) {
+  throw new Error("Inquiry status tracking is not enabled.");
 }
 
-async function deleteMysqlFormSubmission(id: string) {
-  const response = await fetch(`/api/form-submissions?id=${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-  const result = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
-  if (!response.ok || !result?.ok) {
-    throw new Error(result?.error || "Unable to delete submission.");
-  }
+async function deleteInquiry(id: string) {
+  const { error } = await supabase.from("messages").delete().eq("id", id);
+  if (error) throw error;
 }
 
 function ApplicationsTab() {
@@ -343,7 +484,7 @@ function ApplicationsTab() {
   const loadApplications = async () => {
     setLoading(true);
     try {
-      const data = await fetchMysqlForms("applications");
+      const data = await fetchInquiryRows("applications");
       setApplications(data as ApplicationRecord[]);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load applications.");
@@ -382,7 +523,7 @@ function ApplicationsTab() {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      await updateMysqlFormStatus(id, status);
+      await updateInquiryStatus(id, status);
       setApplications((items) => items.map((item) => item.id === id ? { ...item, status } : item));
       setSelectedApplication((item) => item?.id === id ? { ...item, status } : item);
     } catch (error) {
@@ -393,7 +534,7 @@ function ApplicationsTab() {
   const deleteApplication = async (id: string) => {
     if (!window.confirm("Delete this application?")) return;
     try {
-      await deleteMysqlFormSubmission(id);
+      await deleteInquiry(id);
       setApplications((items) => items.filter((item) => item.id !== id));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to delete application.");
@@ -480,6 +621,7 @@ type ServiceSubmission = {
 };
 
 const serviceSubmissionSections = [
+  ["recruitment_enquiry", "Recruitment Service Enquiries"],
   ["career_counselling", "Career Counselling Requests"],
   ["placement_assistance", "Placement Assistance Applications"],
   ["institution_partnership", "Institution Partnership Enquiries"],
@@ -502,7 +644,7 @@ function ServiceSubmissionsTab() {
   const loadSubmissions = async () => {
     setLoading(true);
     try {
-      const data = await fetchMysqlForms("services");
+      const data = await fetchInquiryRows("services");
       setSubmissions(data as ServiceSubmission[]);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to load service submissions.");
@@ -516,7 +658,7 @@ function ServiceSubmissionsTab() {
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      await updateMysqlFormStatus(id, status);
+      await updateInquiryStatus(id, status);
       setSubmissions((items) => items.map((item) => item.id === id ? { ...item, status } : item));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to update status.");
@@ -526,7 +668,7 @@ function ServiceSubmissionsTab() {
   const deleteSubmission = async (id: string) => {
     if (!window.confirm("Delete this submission?")) return;
     try {
-      await deleteMysqlFormSubmission(id);
+      await deleteInquiry(id);
       setSubmissions((items) => items.filter((item) => item.id !== id));
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Unable to delete submission.");
@@ -627,21 +769,37 @@ function CurriculumTab() {
   const [message, setMessage] = useState("");
 
   const loadCourses = async () => {
-    const { data } = await supabase.from("courses").select("id, title, slug").order("title");
-    const nextCourses = data || [];
-    setCourses(nextCourses);
-    if (!courseId && nextCourses[0]) setCourseId(nextCourses[0].id);
+    setMessage("");
+    try {
+      const { data, error } = await supabase.from("courses").select("id, title, slug").order("title");
+      if (error) throw error;
+      const nextCourses = data || [];
+      setCourses(nextCourses);
+      if (!courseId && nextCourses[0]) setCourseId(nextCourses[0].id);
+    } catch (error) {
+      setCourses([]);
+      setWeeks([]);
+      setMessage(error instanceof Error ? error.message : "Unable to load courses.");
+    }
   };
 
   const loadWeeks = async (selectedCourseId = courseId) => {
-    if (!selectedCourseId) return;
-    const { data, error } = await (supabase as any)
-      .from("course_weeks")
-      .select("*")
-      .eq("course_id", selectedCourseId)
-      .order("week_number");
-    if (error) setMessage(error.message);
-    setWeeks(data || []);
+    if (!selectedCourseId) {
+      setWeeks([]);
+      return;
+    }
+    try {
+      const { data, error } = await (supabase as any)
+        .from("course_weeks")
+        .select("*")
+        .eq("course_id", selectedCourseId)
+        .order("week_number");
+      if (error) throw error;
+      setWeeks(data || []);
+    } catch (error) {
+      setWeeks([]);
+      setMessage(error instanceof Error ? error.message : "Unable to load curriculum weeks.");
+    }
   };
 
   useEffect(() => {
@@ -862,10 +1020,10 @@ function ServicePagesTab() {
     }));
   };
 
-  const updateFieldLabel = (index: number, value: string) => {
+  const updateField = (index: number, changes: Partial<ServicePage["fields"][number]>) => {
     setPage((current) => ({
       ...current,
-      fields: current.fields.map((field, fieldIndex) => fieldIndex === index ? { ...field, label: value } : field),
+      fields: current.fields.map((field, fieldIndex) => fieldIndex === index ? { ...field, ...changes } : field),
     }));
   };
 
@@ -876,7 +1034,7 @@ function ServicePagesTab() {
   const addField = () => {
     setPage((current) => ({
       ...current,
-      fields: [...current.fields, { name: `new_field_${current.fields.length + 1}`, label: "New field label" }],
+      fields: [...current.fields, { name: `new_field_${current.fields.length + 1}`, label: "New field label", type: "text", required: false }],
     }));
   };
 
@@ -980,14 +1138,34 @@ function ServicePagesTab() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Field name</span>
-                    <input value={field.name} onChange={(event) => setPage((current) => ({ ...current, fields: current.fields.map((item, itemIndex) => itemIndex === index ? { ...item, name: event.target.value } : item) }))} className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+                    <input value={field.name} onChange={(event) => updateField(index, { name: event.target.value })} className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
                   </label>
                   <label className="block">
                     <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Label</span>
-                    <input value={field.label} onChange={(event) => updateFieldLabel(index, event.target.value)} className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+                    <input value={field.label} onChange={(event) => updateField(index, { label: event.target.value })} className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
                   </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Field type</span>
+                    <select value={field.type ?? "text"} onChange={(event) => updateField(index, { type: event.target.value as ServicePage["fields"][number]["type"] })} className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm">
+                      {(["text", "email", "tel", "url", "date", "textarea", "select", "file"] as const).map((type) => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Placeholder</span>
+                    <input value={field.placeholder ?? ""} onChange={(event) => updateField(index, { placeholder: event.target.value })} className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+                  </label>
+                  {field.type === "select" && (
+                    <label className="block md:col-span-2">
+                      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">Options (comma separated)</span>
+                      <input value={(field.options ?? []).join(", ")} onChange={(event) => updateField(index, { options: event.target.value.split(",").map((option) => option.trim()).filter(Boolean) })} className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm" />
+                    </label>
+                  )}
                 </div>
-                <div className="mt-3 flex gap-3">
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <label className="inline-flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={Boolean(field.required)} onChange={(event) => updateField(index, { required: event.target.checked })} className="h-4 w-4 rounded accent-primary" />
+                    Required
+                  </label>
                   <button type="button" onClick={() => setPage((current) => ({ ...current, fields: current.fields.filter((_, itemIndex) => itemIndex !== index) }))} className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Remove</button>
                 </div>
               </div>
@@ -1008,6 +1186,146 @@ function ServicePagesTab() {
   );
 }
 
+function ApplicationFormsTab() {
+  const queryClient = useQueryClient();
+  const [selectedType, setSelectedType] = useState<ApplicationFormType>("course_registration");
+  const [config, setConfig] = useState<ApplicationFormConfig>(DEFAULT_APPLICATION_FORMS.course_registration);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const loadConfig = async (type: ApplicationFormType) => {
+    setLoading(true);
+    setMessage("");
+    const fallback = getLocalApplicationForm(type) ?? DEFAULT_APPLICATION_FORMS[type];
+    setConfig(fallback);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void loadConfig(selectedType);
+  }, [selectedType]);
+
+  const updateField = (index: number, changes: Partial<ApplicationFormField>) => {
+    setConfig((current) => ({
+      ...current,
+      fields: current.fields.map((field, fieldIndex) => fieldIndex === index ? { ...field, ...changes } : field),
+    }));
+  };
+
+  const protectedFields = selectedType === "course_registration"
+    ? ["full_name", "email", "phone"]
+    : ["full_name", "email", "phone", "resume"];
+
+  const saveConfig = async () => {
+    setSaving(true);
+    setMessage("");
+    try {
+      saveLocalApplicationForm(selectedType, config);
+      setMessage("Application form saved in this browser. Public forms here will use the updated settings.");
+      await queryClient.invalidateQueries({ queryKey: ["application-forms", selectedType] });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to save this form in this browser.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addField = () => {
+    setConfig((current) => ({
+      ...current,
+      fields: [...current.fields, {
+        name: `custom_field_${current.fields.length + 1}`,
+        label: "Additional field",
+        type: "text",
+        required: false,
+        placeholder: "",
+      }],
+    }));
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display text-2xl font-bold">Application Forms</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Edit course enrollment and internship application form text, labels, and optional fields.</p>
+      </div>
+
+      <label className="block max-w-xl text-sm font-medium">
+        Form to edit
+        <select value={selectedType} onChange={(event) => setSelectedType(event.target.value as ApplicationFormType)} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5">
+          <option value="course_registration">Course enrollment</option>
+          <option value="internship_application">Internship application</option>
+        </select>
+      </label>
+
+      {message && <p role="status" className="rounded-lg border border-border bg-card px-4 py-3 text-sm">{message}</p>}
+      {loading ? <p className="text-sm text-muted-foreground">Loading form settings...</p> : (
+        <div className="space-y-5">
+          <div className="grid gap-4 rounded-xl border border-border bg-card p-5 md:grid-cols-2">
+            <label className="text-sm font-medium">Form title
+              <input value={config.title} onChange={(event) => setConfig({ ...config, title: event.target.value })} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5" />
+            </label>
+            <label className="text-sm font-medium">Submit button label
+              <input value={config.submitLabel} onChange={(event) => setConfig({ ...config, submitLabel: event.target.value })} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5" />
+            </label>
+            <label className="text-sm font-medium md:col-span-2">Form description
+              <textarea value={config.description} onChange={(event) => setConfig({ ...config, description: event.target.value })} rows={3} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5" />
+            </label>
+            <label className="text-sm font-medium md:col-span-2">Success message
+              <textarea value={config.successMessage} onChange={(event) => setConfig({ ...config, successMessage: event.target.value })} rows={3} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5" />
+            </label>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <h3 className="font-display text-xl font-semibold">Fields</h3>
+              <button type="button" onClick={addField} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-primary hover:bg-secondary"><Plus className="h-4 w-4" /> Add field</button>
+            </div>
+            {config.fields.map((field, index) => {
+              const isProtected = protectedFields.includes(field.name);
+              return (
+                <article key={`${field.name}-${index}`} className="grid gap-4 rounded-xl border border-border bg-card p-4 md:grid-cols-2">
+                  <label className="text-sm font-medium">Field key
+                    <input value={field.name} readOnly className="mt-2 w-full rounded-lg border border-border bg-secondary px-3 py-2.5 text-muted-foreground" />
+                  </label>
+                  <label className="text-sm font-medium">Label
+                    <input value={field.label} onChange={(event) => updateField(index, { label: event.target.value })} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5" />
+                  </label>
+                  <label className="text-sm font-medium">Field type
+                    <select value={field.type} onChange={(event) => updateField(index, { type: event.target.value as ApplicationFormField["type"] })} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5">
+                      {(["text", "email", "tel", "date", "textarea", "select", "file"] as const).map((type) => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                  </label>
+                  <label className="text-sm font-medium">Placeholder
+                    <input value={field.placeholder ?? ""} onChange={(event) => updateField(index, { placeholder: event.target.value })} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5" />
+                  </label>
+                  {field.type === "select" && (
+                    <label className="text-sm font-medium md:col-span-2">Options (comma separated)
+                      <input value={(field.options ?? []).join(", ")} onChange={(event) => updateField(index, { options: event.target.value.split(",").map((option) => option.trim()).filter(Boolean) })} className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2.5" />
+                    </label>
+                  )}
+                  <div className="flex items-center justify-between gap-4 md:col-span-2">
+                    <label className="inline-flex items-center gap-2 text-sm font-medium">
+                      <input type="checkbox" checked={field.required} disabled={isProtected} onChange={(event) => updateField(index, { required: event.target.checked })} className="h-4 w-4 rounded accent-primary" />
+                      Required
+                    </label>
+                    <button type="button" disabled={isProtected} onClick={() => setConfig((current) => ({ ...current, fields: current.fields.filter((_, fieldIndex) => fieldIndex !== index) }))} className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-40">Remove field</button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          <button type="button" onClick={() => void saveConfig()} disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground disabled:opacity-50">
+            <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Application Form"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Training Programs Tab
 function TrainingProgramsTab() {
   return <ContentManager entity="training_programs" />;
@@ -1019,7 +1337,7 @@ function TeamsTab() {
 }
 
 type EntityName = "courses" | "internships" | "training_programs" | "team_members";
-type ContentField = { name: string; label: string; type?: "text" | "textarea" | "number" | "file" };
+type ContentField = { name: string; label: string; type?: "text" | "textarea" | "number" | "date" | "checkbox" | "file" };
 type ContentRecord = {
   id?: string;
   title?: string;
@@ -1029,6 +1347,14 @@ type ContentRecord = {
   published_at?: string | null;
   [key: string]: any;
 };
+
+async function tableHasColumn(table: "courses" | "internships", column: "skills"): Promise<boolean> {
+  const { error } = await (supabase as any).from(table).select(column).limit(1);
+  if (!error) return true;
+
+  const message = error.message ?? "";
+  return !/schema cache|Could not find the .*column|does not exist/i.test(message);
+}
 
 const contentConfig: Record<EntityName, { title: string; fields: ContentField[] }> = {
   courses: {
@@ -1044,7 +1370,10 @@ const contentConfig: Record<EntityName, { title: string; fields: ContentField[] 
       { name: "duration", label: "Duration" },
       { name: "instructor", label: "Instructor" },
       { name: "price", label: "Price", type: "number" },
-      { name: "thumbnail_path", label: "Course image", type: "file" },
+      { name: "discount_price", label: "Discount price", type: "number" },
+      { name: "language", label: "Language" },
+      { name: "featured", label: "Featured", type: "checkbox" },
+      { name: "thumbnail_path", label: "Course image URL" },
     ],
   },
   internships: {
@@ -1057,13 +1386,17 @@ const contentConfig: Record<EntityName, { title: string; fields: ContentField[] 
       { name: "responsibilities", label: "Responsibilities", type: "textarea" },
       { name: "requirements", label: "Requirements", type: "textarea" },
       { name: "skills", label: "Skills (comma-separated)" },
+      { name: "thumbnail_path", label: "Internship image", type: "file" },
       { name: "duration", label: "Duration" },
       { name: "stipend", label: "Stipend" },
+      { name: "application_fee", label: "Document processing fee", type: "number" },
       { name: "location", label: "Location" },
       { name: "work_mode", label: "Work mode" },
       { name: "eligibility", label: "Eligibility", type: "textarea" },
       { name: "openings", label: "Openings", type: "number" },
       { name: "experience_level", label: "Experience level" },
+      { name: "application_deadline", label: "Application deadline", type: "date" },
+      { name: "featured", label: "Featured", type: "checkbox" },
     ],
   },
   training_programs: {
@@ -1087,13 +1420,14 @@ const contentConfig: Record<EntityName, { title: string; fields: ContentField[] 
       { name: "bio", label: "Bio", type: "textarea" },
       { name: "linkedin", label: "LinkedIn URL" },
       { name: "github", label: "GitHub URL" },
-      { name: "photo_path", label: "Photo path" },
+      { name: "photo_path", label: "Team photo", type: "file" },
       { name: "display_order", label: "Display order", type: "number" },
     ],
   },
 };
 
 function ContentManager({ entity }: { entity: EntityName }) {
+  const queryClient = useQueryClient();
   const config = contentConfig[entity];
   const [items, setItems] = useState<ContentRecord[]>([]);
   const [form, setForm] = useState<ContentRecord>({});
@@ -1102,16 +1436,54 @@ function ContentManager({ entity }: { entity: EntityName }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const publicQueryKeys: Record<EntityName, readonly unknown[]> = {
+    courses: ["courses"],
+    internships: ["internships"],
+    training_programs: ["training-programs"],
+    team_members: ["team-members"],
+  };
+  const refreshPublicContent = async (savedPayload?: Partial<ContentRecord>, removedId?: string | null) => {
+    const key = publicQueryKeys[entity];
+    queryClient.setQueryData(key, (current: unknown) => {
+      if (!Array.isArray(current)) return current;
+
+      if (removedId) {
+        return current.filter((item) => (item as any)?.id !== removedId);
+      }
+
+      const nextItem = savedPayload ? { ...savedPayload } : null;
+      if (!nextItem) return current;
+
+      const targetId = nextItem.id ?? editingId;
+      if (targetId) {
+        return current.map((item) => ((item as any)?.id === targetId ? { ...(item as object), ...nextItem } : item));
+      }
+
+      return [nextItem, ...current];
+    });
+    await queryClient.invalidateQueries({ queryKey: key, refetchType: "active" });
+  };
 
   const loadItems = async () => {
     setLoading(true);
-    const { data, error } = await (supabase as any)
-      .from(entity)
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) setMessage(error.message);
-    setItems(data || []);
-    setLoading(false);
+    setMessage("");
+    try {
+      if (entity === "courses") {
+        setItems(getManagedCourses() as ContentRecord[]);
+        return;
+      }
+      const { data, error } = await (supabase as any)
+        .from(entity)
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setItems(data || []);
+    } catch (error) {
+      setItems([]);
+      setMessage(error instanceof Error ? error.message : `Unable to load ${config.title.toLowerCase()}.`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -1122,10 +1494,12 @@ function ContentManager({ entity }: { entity: EntityName }) {
     setEditingId(null);
     setForm(
       entity === "team_members"
-        ? { display_order: 0 }
+        ? { display_order: 0, published: true }
         : entity === "internships"
-          ? { openings: 1, stipend: "Unpaid", status: "draft", featured: false }
-          : { price: 0 },
+          ? { openings: 1, stipend: "Unpaid", status: "published", featured: false }
+          : entity === "courses"
+            ? { price: 0, status: "published", featured: false }
+            : { price: 0, status: "published", featured: false },
     );
     setMessage("");
   };
@@ -1142,6 +1516,55 @@ function ContentManager({ entity }: { entity: EntityName }) {
     setSaving(true);
     setMessage("");
     const payload = { ...form };
+    if (entity === "courses") {
+      if (typeof payload.skills === "string") {
+        payload.skills = payload.skills.split(",").map((skill: string) => skill.trim()).filter(Boolean);
+      }
+      const currentCourses = getManagedCourses();
+      const existingCourse = currentCourses.find((course) => course.id === editingId);
+      const timestamp = new Date().toISOString();
+      const savedCourse = {
+        ...existingCourse,
+        ...payload,
+        id: existingCourse?.id ?? String(payload.id || crypto.randomUUID()),
+        title: String(payload.title ?? existingCourse?.title ?? ""),
+        slug: String(payload.slug ?? existingCourse?.slug ?? ""),
+        short_description: String(payload.short_description ?? existingCourse?.short_description ?? ""),
+        full_description: String(payload.full_description ?? existingCourse?.full_description ?? ""),
+        category: String(payload.category ?? existingCourse?.category ?? ""),
+        level: String(payload.level ?? existingCourse?.level ?? ""),
+        duration: String(payload.duration ?? existingCourse?.duration ?? ""),
+        price: Number(payload.price ?? existingCourse?.price ?? 0),
+        discount_price: payload.discount_price == null || payload.discount_price === ""
+          ? existingCourse?.discount_price ?? null
+          : Number(payload.discount_price),
+        thumbnail_path: String(payload.thumbnail_path ?? existingCourse?.thumbnail_path ?? ""),
+        instructor: String(payload.instructor ?? existingCourse?.instructor ?? ""),
+        language: String(payload.language ?? existingCourse?.language ?? ""),
+        skills: Array.isArray(payload.skills) ? payload.skills as string[] : existingCourse?.skills ?? [],
+        featured: Boolean(payload.featured ?? existingCourse?.featured),
+        status: String(payload.status ?? existingCourse?.status ?? "published"),
+        published_at: payload.status === "draft" ? null : String(payload.published_at ?? existingCourse?.published_at ?? timestamp),
+        created_at: existingCourse?.created_at ?? timestamp,
+        updated_at: timestamp,
+      } as Course;
+      const nextCourses = existingCourse
+        ? currentCourses.map((course) => course.id === existingCourse.id ? savedCourse : course)
+        : [savedCourse, ...currentCourses];
+      saveManagedCourses(nextCourses);
+      setItems(nextCourses as ContentRecord[]);
+      queryClient.setQueryData(["courses"], () => nextCourses.filter((course) => course.status === "published"));
+      setMessage("Course saved in this browser. The public course pages now use these details.");
+      setForm({});
+      setEditingId(null);
+      await refreshPublicContent(savedCourse as Partial<ContentRecord>);
+      setSaving(false);
+      return;
+    }
+    const supportsSkills = (entity === "courses" || entity === "internships")
+      ? await tableHasColumn(entity, "skills")
+      : true;
+
     if (entity === "courses" && typeof payload.skills === "string") {
       payload.skills = payload.skills
         .split(",")
@@ -1154,6 +1577,9 @@ function ContentManager({ entity }: { entity: EntityName }) {
         .map((skill: string) => skill.trim())
         .filter(Boolean);
     }
+    if (!supportsSkills) {
+      delete payload.skills;
+    }
     if (entity === "team_members") {
       payload.published = Boolean(form.published);
     } else {
@@ -1165,23 +1591,51 @@ function ContentManager({ entity }: { entity: EntityName }) {
       : await (supabase as any).from(entity).insert(payload);
     if (result.error) setMessage(result.error.message);
     else {
+      const itemId = editingId ?? result.data?.[0]?.id ?? form.id ?? crypto.randomUUID();
+      const nextPayload = {
+        ...(payload as object),
+        id: itemId,
+        status: payload.status ?? (entity === "team_members" ? (payload.published ? "published" : "draft") : "published"),
+        published: entity === "team_members" ? Boolean(payload.published) : undefined,
+        published_at: payload.published_at ?? new Date().toISOString(),
+      } as Partial<ContentRecord>;
+      setItems((current) => {
+        const base = current ?? [];
+        const candidate = { ...nextPayload } as ContentRecord;
+        if (editingId) {
+          return base.map((item) => item.id === editingId ? { ...item, ...candidate } : item);
+        }
+        return [candidate, ...base.filter((item) => item.id !== candidate.id)];
+      });
+      queryClient.setQueryData(publicQueryKeys[entity], (current: unknown) => {
+        if (!Array.isArray(current)) return current;
+        const published = (entity === "team_members")
+          ? current.filter((item) => (item as any)?.published)
+          : current.filter((item) => (item as any)?.status === "published");
+        const nextPublished = editingId
+          ? published.map((item) => ((item as any)?.id === editingId ? { ...(item as object), ...nextPayload } : item))
+          : [{ ...nextPayload }, ...published.filter((item) => (item as any)?.id !== itemId)];
+        return nextPublished.filter((item) => entity === "team_members" ? Boolean((item as any)?.published) : (item as any)?.status === "published");
+      });
       setMessage("Saved successfully.");
       setForm({});
       setEditingId(null);
+      await refreshPublicContent(nextPayload);
       await loadItems();
     }
     setSaving(false);
   };
 
-  const uploadCourseImage = async (file: File) => {
-    if (entity !== "courses") return;
+  const uploadContentImage = async (file: File, fieldName: string) => {
+    if (entity !== "courses" && entity !== "internships" && entity !== "team_members") return;
     setSaving(true);
     setMessage("");
     const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const safeSlug = String(form.slug || "course")
+    const folder = entity === "team_members" ? "team" : entity;
+    const safeSlug = String(form.slug || form.name || form.title || entity)
       .toLowerCase()
       .replace(/[^a-z0-9-]+/g, "-");
-    const path = `courses/${safeSlug}-${crypto.randomUUID()}.${extension}`;
+    const path = `${folder}/${safeSlug}-${crypto.randomUUID()}.${extension}`;
     const { error } = await supabase.storage.from("media").upload(path, file, {
       cacheControl: "3600",
       upsert: false,
@@ -1191,17 +1645,28 @@ function ContentManager({ entity }: { entity: EntityName }) {
       setMessage(error.message);
     } else {
       const { data } = supabase.storage.from("media").getPublicUrl(path);
-      setForm((current) => ({ ...current, thumbnail_path: data.publicUrl }));
-      setMessage("Course image uploaded. Save the course to publish this change.");
+      setForm((current) => ({ ...current, [fieldName]: data.publicUrl }));
+      setMessage("Image uploaded. Save this item to publish the change.");
     }
     setSaving(false);
   };
   const deleteItem = async (item: ContentRecord) => {
     const label = item.title || item.name || "this item";
     if (!window.confirm(`Are you sure you want to delete ${label}?`)) return;
+    if (entity === "courses") {
+      const nextCourses = getManagedCourses().filter((course) => course.id !== item.id);
+      saveManagedCourses(nextCourses);
+      setItems(nextCourses as ContentRecord[]);
+      setMessage("Course removed from this browser's public catalog.");
+      await queryClient.invalidateQueries({ queryKey: ["courses"] });
+      return;
+    }
     const { error } = await (supabase as any).from(entity).delete().eq("id", item.id);
     if (error) setMessage(error.message);
-    else await loadItems();
+    else {
+      await refreshPublicContent();
+      await loadItems();
+    }
   };
 
   const togglePublished = async (item: ContentRecord) => {
@@ -1213,9 +1678,22 @@ function ContentManager({ entity }: { entity: EntityName }) {
             status: isPublished ? "draft" : "published",
             published_at: isPublished ? null : new Date().toISOString(),
           };
+    if (entity === "courses") {
+      const nextCourses = getManagedCourses().map((course) => course.id === item.id
+        ? { ...course, ...changes, updated_at: new Date().toISOString() }
+        : course) as Course[];
+      saveManagedCourses(nextCourses);
+      setItems(nextCourses as ContentRecord[]);
+      setMessage("Course visibility updated in this browser.");
+      await queryClient.invalidateQueries({ queryKey: ["courses"] });
+      return;
+    }
     const { error } = await (supabase as any).from(entity).update(changes).eq("id", item.id);
     if (error) setMessage(error.message);
-    else await loadItems();
+    else {
+      await refreshPublicContent();
+      await loadItems();
+    }
   };
 
   const visibleItems = items.filter((item) =>
@@ -1228,7 +1706,9 @@ function ContentManager({ entity }: { entity: EntityName }) {
         <div>
           <h2 className="font-display text-2xl font-bold">Manage {config.title}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Only super_admin mutations are allowed by Supabase RLS.
+            {entity === "courses"
+              ? "Edit the course catalog stored in this browser. Changes appear on the public course pages on this device."
+              : "Only super_admin mutations are allowed by Supabase RLS."}
           </p>
         </div>
         <button
@@ -1267,7 +1747,14 @@ function ContentManager({ entity }: { entity: EntityName }) {
               <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {field.label}
               </span>
-              {field.type === "textarea" ? (
+              {field.type === "checkbox" ? (
+                <input
+                  type="checkbox"
+                  checked={Boolean(form[field.name])}
+                  onChange={(event) => setForm({ ...form, [field.name]: event.target.checked })}
+                  className="h-4 w-4 rounded border-border accent-primary"
+                />
+              ) : field.type === "textarea" ? (
                 <textarea
                   required={field.name === "title" || field.name === "name"}
                   value={form[field.name] || ""}
@@ -1282,13 +1769,13 @@ function ContentManager({ entity }: { entity: EntityName }) {
                     accept="image/png,image/jpeg,image/webp,image/gif"
                     onChange={(event) => {
                       const [file] = Array.from(event.target.files || []);
-                      if (file) void uploadCourseImage(file);
+                      if (file) void uploadContentImage(file, field.name);
                     }}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary/10 file:px-3 file:py-1 file:text-primary"
                   />
-                  {form.thumbnail_path && (
+                  {form[field.name] && (
                     <p className="truncate text-xs text-muted-foreground">
-                      Image ready: {String(form.thumbnail_path)}
+                      Image ready: {String(form[field.name])}
                     </p>
                   )}
                 </div>
@@ -1297,7 +1784,7 @@ function ContentManager({ entity }: { entity: EntityName }) {
                   required={
                     field.name === "title" || field.name === "name" || field.name === "slug"
                   }
-                  type={field.type || "text"}
+                  type={field.type === "date" ? "date" : field.type === "number" ? "number" : "text"}
                   value={form[field.name] ?? ""}
                   onChange={(event) =>
                     setForm({

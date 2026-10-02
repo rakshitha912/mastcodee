@@ -17,6 +17,7 @@ export type Database = {
       announcements: {
         Row: {
           category: string
+            skills: string[]
           created_at: string
           description: string
           expiry_date: string | null
@@ -37,6 +38,7 @@ export type Database = {
           featured?: boolean
           id?: string
           image_path?: string | null
+            skills?: string[]
           publish_date?: string
           show_banner?: boolean
           status?: string
@@ -57,6 +59,7 @@ export type Database = {
           title?: string
           updated_at?: string
         }
+            skills?: string[]
         Relationships: []
       }
       application_status_history: {
@@ -93,6 +96,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      inquiries: {
+        Row: {
+          created_at: string
+          fields: Json
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          fields: Json
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          fields?: Json
+          id?: string
+        }
+        Relationships: []
       }
       applications: {
         Row: {
@@ -291,6 +312,7 @@ export type Database = {
       }
       internships: {
         Row: {
+          application_fee: number
           application_deadline: string | null
           created_at: string
           department: string
@@ -309,11 +331,13 @@ export type Database = {
           slug: string
           status: string
           stipend: string
+          thumbnail_path: string | null
           title: string
           updated_at: string
           work_mode: string
         }
         Insert: {
+          application_fee?: number
           application_deadline?: string | null
           created_at?: string
           department?: string
@@ -332,11 +356,13 @@ export type Database = {
           slug: string
           status?: string
           stipend?: string
+          thumbnail_path?: string | null
           title: string
           updated_at?: string
           work_mode?: string
         }
         Update: {
+          application_fee?: number
           application_deadline?: string | null
           created_at?: string
           department?: string
@@ -355,6 +381,7 @@ export type Database = {
           slug?: string
           status?: string
           stipend?: string
+          thumbnail_path?: string | null
           title?: string
           updated_at?: string
           work_mode?: string

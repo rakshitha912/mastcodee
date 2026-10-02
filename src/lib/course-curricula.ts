@@ -22,6 +22,8 @@ export interface CourseDay {
   assignment?: string;
   miniProject?: string;
   expectedOutcome: string;
+  isAssessment?: boolean;
+  isMockInterview?: boolean;
 }
 
 export interface CourseWeekReport {
@@ -35,18 +37,22 @@ export interface CourseWeekReport {
   assignments: string[];
   miniProjects: string[];
   outcomes: string[];
+  assessmentTopics: string[];
+  assessmentTask: string;
+  mockInterview?: string;
+  scheduleLabel: string;
+  restDayNote: string;
 }
 
-const intensive90DayPhases = [
-  { start: 1, end: 30, label: "Days 1-30: Foundation + Core Development" },
-  { start: 31, end: 60, label: "Days 31-60: Advanced Development + Full-Stack Skills" },
-  { start: 61, end: 75, label: "Days 61-75: Advanced Concepts + Real-World Development" },
-  { start: 76, end: 85, label: "Days 76-85: Major Project + Deployment + Testing" },
-  { start: 86, end: 90, label: "Days 86-90: Resume + Mock Interviews + Placement Preparation" },
+const coursePhases = [
+  { start: 1, end: 30, label: "Days 1-30: Foundations and Core Skills" },
+  { start: 31, end: 60, label: "Days 31-60: Applied Skills and Mid-Course Interview" },
+  { start: 61, end: 80, label: "Days 61-80: Advanced Topics and Projects" },
+  { start: 81, end: 100, label: "Days 81-100: Capstone, Review, and Final Assessment" },
 ];
 
 function phaseForDay(day: number) {
-  return intensive90DayPhases.find((phase) => day >= phase.start && day <= phase.end)?.label ?? intensive90DayPhases[0].label;
+  return coursePhases.find((phase) => day >= phase.start && day <= phase.end)?.label ?? coursePhases[0].label;
 }
 
 function splitTopics(topics: string[], parts: number) {
@@ -57,50 +63,99 @@ function splitTopics(topics: string[], parts: number) {
   });
 }
 
-export function compressCurriculumTo90Days(curriculum: CourseMonth[]): CourseDay[] {
+export function build100DayCurriculum(curriculum: CourseMonth[]): CourseDay[] {
   const weeks = curriculum.flatMap((month) => month.weeks);
-  const days: CourseDay[] = [];
-  let dayNumber = 1;
+  const totalClassDays = 100;
+  const weeklyTestCount = Math.ceil(totalClassDays / 6);
+  const lessonDayCount = totalClassDays - weeklyTestCount;
+  const lessonDays = weeks.flatMap((week, weekIndex) => {
+    const firstDay = Math.floor((weekIndex * lessonDayCount) / weeks.length);
+    const afterLastDay = Math.floor(((weekIndex + 1) * lessonDayCount) / weeks.length);
+    const daysForModule = afterLastDay - firstDay;
+    const topicGroups = splitTopics(week.topics, daysForModule);
 
-  weeks.forEach((week, weekIndex) => {
-    const daysForWeek = weekIndex % 4 === 3 ? 3 : 4;
-    const topicGroups = splitTopics(week.topics, daysForWeek);
-
-    topicGroups.forEach((topics, dayIndex) => {
-      const isWeekEnd = dayIndex === topicGroups.length - 1;
-      days.push({
-        day: dayNumber,
-        phase: phaseForDay(dayNumber),
-        title: `${week.title}${daysForWeek > 1 ? ` - Intensive Day ${dayIndex + 1} of ${daysForWeek}` : ""}`,
+    return topicGroups.map((topics, dayIndex): Omit<CourseDay, "day" | "phase"> => {
+      const isModuleEnd = dayIndex === topicGroups.length - 1;
+      return {
+        title: week.title,
         topics,
-        practicalTask: isWeekEnd ? week.practicalTask : undefined,
-        assignment: isWeekEnd ? week.assignment : undefined,
-        miniProject: isWeekEnd ? week.miniProject : undefined,
-        expectedOutcome: isWeekEnd ? week.expectedOutcome : `Build toward the ${week.expectedOutcome.toLowerCase()}`,
-      });
-      dayNumber += 1;
+        practicalTask: isModuleEnd ? week.practicalTask : undefined,
+        assignment: isModuleEnd ? week.assignment : undefined,
+        miniProject: isModuleEnd ? week.miniProject : undefined,
+        expectedOutcome: isModuleEnd ? week.expectedOutcome : `Build toward the ${week.expectedOutcome.toLowerCase()}`,
+      };
     });
   });
+
+  const days: CourseDay[] = [];
+  let lessonIndex = 0;
+  for (let weekIndex = 0; days.length < totalClassDays; weekIndex += 1) {
+    const lessonsThisWeek = Math.min(5, lessonDays.length - lessonIndex);
+    const weekLessons: CourseDay[] = [];
+
+    for (let lessonInWeek = 0; lessonInWeek < lessonsThisWeek; lessonInWeek += 1) {
+      const lesson = lessonDays[lessonIndex++];
+      const dayNumber = days.length + 1;
+      const isMockInterview = dayNumber === 50;
+      const interviewTask = "Complete a timed mock interview covering the skills learned so far, then review feedback and set improvement goals.";
+      const day: CourseDay = {
+        ...lesson,
+        day: dayNumber,
+        phase: phaseForDay(dayNumber),
+        title: isMockInterview ? `Mid-Course Mock Interview: ${lesson.title}` : lesson.title,
+        topics: isMockInterview ? [...lesson.topics, "Explain and demonstrate course concepts in a mock interview"] : lesson.topics,
+        practicalTask: isMockInterview ? [lesson.practicalTask, interviewTask].filter(Boolean).join(" ") : lesson.practicalTask,
+        assignment: isMockInterview ? [lesson.assignment, "Record interview feedback and a focused improvement plan."].filter(Boolean).join(" ") : lesson.assignment,
+        expectedOutcome: isMockInterview ? "Practice explaining technical decisions and receive actionable midpoint feedback." : lesson.expectedOutcome,
+        isMockInterview,
+      };
+      days.push(day);
+      weekLessons.push(day);
+    }
+
+    const assessmentDay = days.length + 1;
+    const assessmentTopics = Array.from(new Set(weekLessons.flatMap((day) => day.topics)));
+    days.push({
+      day: assessmentDay,
+      phase: phaseForDay(assessmentDay),
+      title: `Week ${weekIndex + 1} Test`,
+      topics: assessmentTopics,
+      practicalTask: "Take a short written quiz and hands-on test on this week's lessons, then review and correct missed questions.",
+      assignment: "Complete test corrections and note topics to revisit before the next week's classes.",
+      expectedOutcome: "Check understanding of the week's material and identify what needs more practice.",
+      isAssessment: true,
+    });
+  }
 
   return days;
 }
 
-export function group90DayCurriculumByWeek(days: CourseDay[]): CourseWeekReport[] {
+export function group100DayCurriculumByWeek(days: CourseDay[]): CourseWeekReport[] {
   const reports: CourseWeekReport[] = [];
 
-  for (let index = 0; index < days.length; index += 7) {
-    const weekDays = days.slice(index, index + 7);
+  for (let index = 0; index < days.length; index += 6) {
+    const weekDays = days.slice(index, index + 6);
+    const assessment = weekDays[weekDays.length - 1];
+    const lessonDays = weekDays.slice(0, -1);
+    const mockInterview = lessonDays.find((day) => day.isMockInterview);
     reports.push({
       week: reports.length + 1,
       startDay: weekDays[0].day,
       endDay: weekDays[weekDays.length - 1].day,
       phase: weekDays[0].phase,
-      title: Array.from(new Set(weekDays.map((day) => day.title.replace(/ - Intensive Day \d+ of \d+$/, "")))).join(" + "),
-      topics: weekDays.flatMap((day) => day.topics),
-      practicalTasks: weekDays.flatMap((day) => day.practicalTask ? [day.practicalTask] : []),
-      assignments: weekDays.flatMap((day) => day.assignment ? [day.assignment] : []),
-      miniProjects: weekDays.flatMap((day) => day.miniProject ? [day.miniProject] : []),
-      outcomes: Array.from(new Set(weekDays.map((day) => day.expectedOutcome))),
+      title: Array.from(new Set(lessonDays.map((day) => day.title))).join(" + "),
+      topics: lessonDays.flatMap((day) => day.topics),
+      practicalTasks: lessonDays.flatMap((day) => day.practicalTask ? [day.practicalTask] : []),
+      assignments: lessonDays.flatMap((day) => day.assignment ? [day.assignment] : []),
+      miniProjects: lessonDays.flatMap((day) => day.miniProject ? [day.miniProject] : []),
+      outcomes: Array.from(new Set(lessonDays.map((day) => day.expectedOutcome))),
+      assessmentTopics: assessment.topics,
+      assessmentTask: assessment.practicalTask ?? "Complete this week's test and review the results.",
+      mockInterview: mockInterview ? "Complete the scheduled midpoint mock interview and record interviewer feedback." : undefined,
+      scheduleLabel: lessonDays.length === 5
+        ? "5 class days | Day 6 test | Day 7 rest"
+        : `${lessonDays.length} final class days | Final test | Day 7 rest`,
+      restDayNote: "Day 7: Rest day. No classes or required coursework.",
     });
   }
 

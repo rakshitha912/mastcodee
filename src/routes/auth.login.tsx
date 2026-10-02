@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { Building2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
+function isSupabaseConfigured(): boolean {
+  const url = import.meta.env?.VITE_SUPABASE_URL || process.env?.SUPABASE_URL;
+  const key = import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY || process.env?.SUPABASE_PUBLISHABLE_KEY;
+  return Boolean(url && key);
+}
+
 const ADMIN_NAME = "Rakshitha S";
 const ADMIN_PASSWORD = "Rakshitha@03";
 
@@ -26,6 +32,13 @@ function LoginPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      if (localStorage.getItem("mastcode-admin-session") === "true") {
+        void navigate({ to: "/admin" });
+      }
+      return;
+    }
+
     void supabase.auth.getSession().then(({ data }) => {
       if (data.session) void navigate({ to: "/admin" });
     });
@@ -49,6 +62,14 @@ function LoginPage() {
     }
 
     try {
+      if (!isSupabaseConfigured()) {
+        localStorage.setItem("mastcode-admin-name", adminName.trim());
+        localStorage.setItem("mastcode-admin-session", "true");
+        localStorage.setItem("mastcode-login-banner", "You have been logged in.");
+        await navigate({ to: "/admin" });
+        return;
+      }
+
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: "rakshithamastcode@gmail.com",
         password,

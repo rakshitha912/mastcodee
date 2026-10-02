@@ -1,6 +1,7 @@
 ﻿import { Link } from "@tanstack/react-router";
 import { ArrowRight, CheckCircle2, Loader2, Menu, X } from "lucide-react";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { submitJsonForm } from "@/lib/form-submit";
 
 export const LOGO_URL = "/og/mast_code_logo_2_corrected.png";
 
@@ -75,28 +76,14 @@ export function SiteNav() {
     setSuccessMessage("");
 
     try {
-      const response = await fetch("/api/form-submissions", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          form_type: "contact_enquiry",
-          subject: "Get Started",
-          full_name: fullName,
-          email: "not-provided@get-started.mastcode.local",
-          phone,
-          message,
-          source_page: window.location.pathname,
-        }),
+      await submitJsonForm({
+        form_type: "contact_enquiry",
+        subject: "Get Started",
+        full_name: fullName,
+        email: "not-provided@get-started.mastcode.local",
+        phone,
+        message,
       });
-
-      const result = (await response.json().catch(() => null)) as {
-        ok?: boolean;
-        error?: string;
-      } | null;
-
-      if (!response.ok || !result?.ok) {
-        throw new Error(result?.error || "Unable to submit your request.");
-      }
 
       setSuccessMessage(
         "Thank you! Your request has been submitted successfully. Our team will contact you soon.",
@@ -119,18 +106,6 @@ export function SiteNav() {
         }`}
       >
         <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <Link to="/" className="group flex items-center gap-2.5">
-            <span className="flex h-16 w-28 items-center justify-center rounded-lg bg-white p-1 shadow-sm ring-1 ring-white/20 transition-transform duration-300 group-hover:scale-105 sm:h-20 sm:w-36">
-              <img
-                src={LOGO_URL}
-                alt="MastCode logo"
-                className="h-full w-full object-contain drop-shadow-sm"
-              />
-            </span>
-            <span className="font-display text-lg font-bold tracking-[0.2em] text-foreground sm:text-xl">
-              MASTCODE
-            </span>
-          </Link>
           <div className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
             {navLinks.map((l) => (
               <Link
@@ -379,9 +354,8 @@ export function SiteFooter() {
             <div>
               <h3 className="font-semibold text-foreground">Contact</h3>
               <ul className="mt-3 space-y-2 text-muted-foreground">
-                <li>rakshithamastcode@gmail.com</li>
+                <li><a href="mailto:contact@mastcode.in">contact@mastcode.in</a></li>
                 <li>+91 7019161991</li>
-                <li>+91 7483 645 279</li>
                 <li>Bangalore, Karnataka, India</li>
               </ul>
             </div>

@@ -1,12 +1,28 @@
 ﻿import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { ArrowRight, Clock, GraduationCap, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { PageHero, SiteFooter, SiteNav } from "@/components/site-chrome";
 import { Reveal } from "@/components/Reveal";
-import { coursesQuery, getCoursePrice } from "@/lib/queries";
+import { coursesQuery, getCoursePrice, getManagedCourses, type Course } from "@/lib/queries";
 import { socialMeta } from "@/lib/site";
+
+const coursePhotoIds: Record<string, string> = {
+  "full-stack-development": "photo-1498050108023-c5249f4df085",
+  "machine-learning": "photo-1555255707-c07966088b7b",
+  "python-programming": "photo-1515879218367-8466d910aaa4",
+  "artificial-intelligence": "photo-1677442136019-21780ecad995",
+  "cloud-computing": "photo-1451187580459-43490279c0fa",
+  "data-analytics": "photo-1460925895917-afdab827c52f",
+  "data-analysis": "photo-1460925895917-afdab827c52f",
+  "git-github": "photo-1556075798-4825dfaaf498",
+  "sql-database-management": "photo-1544383835-bda2bc66a55d",
+  "web-development": "photo-1547658719-da2b51169166",
+};
+
+const courseImage = (slug: string) =>
+  `https://images.unsplash.com/${coursePhotoIds[slug] ?? "photo-1516321318423-f06f85e504b3"}?auto=format&fit=crop&w=720&q=75`;
 
 export const Route = createFileRoute("/courses")({
   loader: ({ context }) => context.queryClient.ensureQueryData(coursesQuery()),
@@ -25,19 +41,33 @@ export const Route = createFileRoute("/courses")({
 function CoursesPage() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const { data: courses } = useSuspenseQuery(coursesQuery());
+  const [browserCourses, setBrowserCourses] = useState<Course[] | null>(null);
   const [category, setCategory] = useState("All");
   const [level, setLevel] = useState("All");
+  useEffect(() => {
+    const syncCourses = () => {
+      setBrowserCourses(getManagedCourses().filter((course) => course.status === "published"));
+    };
+    syncCourses();
+    window.addEventListener("storage", syncCourses);
+    window.addEventListener("mastcode-courses-updated", syncCourses);
+    return () => {
+      window.removeEventListener("storage", syncCourses);
+      window.removeEventListener("mastcode-courses-updated", syncCourses);
+    };
+  }, []);
+  const displayedCourses = browserCourses ?? courses;
 
   const categories = useMemo(
-    () => ["All", ...Array.from(new Set(courses.map((c) => c.category)))],
-    [courses],
+    () => ["All", ...Array.from(new Set(displayedCourses.map((c) => c.category)))],
+    [displayedCourses],
   );
   const levels = useMemo(
-    () => ["All", ...Array.from(new Set(courses.map((c) => c.level)))],
-    [courses],
+    () => ["All", ...Array.from(new Set(displayedCourses.map((c) => c.level)))],
+    [displayedCourses],
   );
 
-  const filtered = courses.filter(
+  const filtered = displayedCourses.filter(
     (c) =>
       (category === "All" || c.category === category) && (level === "All" || c.level === level),
   );
@@ -72,77 +102,55 @@ function CoursesPage() {
                 <Link
                   to="/courses/$slug"
                   params={{ slug: c.slug }}
-                  className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
+                  className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
                 >
-                  {c.thumbnail_path && (
+                  <div className="aspect-[16/9] overflow-hidden bg-secondary">
                     <img
-                      src={c.thumbnail_path}
+                      src={c.thumbnail_path || courseImage(c.slug)}
                       alt=""
-                      className="absolute inset-0 h-full w-full object-cover opacity-10 transition-opacity duration-500 group-hover:opacity-20"
+                      loading="lazy"
+                      decoding="async"
+                      onError={(event) => {
+                        const fallback = courseImage(c.slug);
+                        if (event.currentTarget.src !== fallback) {
+                          event.currentTarget.src = fallback;
+                        }
+                      }}
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none"
                     />
-                  )}
+                  </div>
+                  <div className="relative flex flex-1 flex-col p-6">
                   <div className="relative flex items-center justify-between">
                     <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                       {c.category}
                     </span>
                     {c.featured && <Sparkles className="h-4 w-4 animate-flame-pulse text-accent" />}
                   </div>
-                  <h2 className="relative mt-5 font-display text-xl font-semibold leading-snug">
-                    {c.slug === "data-analytics" ? "Data Analysis" : c.title}
-                  </h2>
+                  <h2 className="relative mt-5 font-display text-xl font-semibold leading-snug">{c.title}</h2>
                   <p className="relative mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
                     {c.short_description}
                   </p>
-                  {(c.slug === "data-analytics" || c.slug === "data-analysis") && (
+                  {c.skills?.length > 0 && (
                     <p className="relative mt-3 text-xs leading-relaxed text-muted-foreground">
-                      Excel | SQL | Python | Pandas | NumPy | Power BI | Statistics
-                    </p>
-                  )}
-                  {c.slug === "machine-learning" && (
-                    <p className="relative mt-3 text-xs leading-relaxed text-muted-foreground">
-                      Python | Pandas | NumPy | Scikit-learn | TensorFlow | PyTorch |
-                      NLP | Computer Vision
-                    </p>
-                  )}
-                  {c.slug === "artificial-intelligence" && (
-                    <p className="relative mt-3 text-xs leading-relaxed text-muted-foreground">
-                      Python | Machine Learning | GenAI | LLMs | RAG | AI Agents
-                    </p>
-                  )}
-                  {c.slug === "cloud-computing" && (
-                    <p className="relative mt-3 text-xs leading-relaxed text-muted-foreground">
-                      AWS | Azure | Linux | Docker | Kubernetes | Terraform | DevOps
-                    </p>
-                  )}
-                  {c.slug === "git-github" && (
-                    <p className="relative mt-3 text-xs leading-relaxed text-muted-foreground">
-                      Version Control | Git | GitHub | Branching | Collaboration
-                    </p>
-                  )}
-                  {c.slug === "sql-database-management" && (
-                    <p className="relative mt-3 text-xs leading-relaxed text-muted-foreground">
-                      SQL | MySQL | PostgreSQL | DBMS | Database Design | Optimization
-                    </p>
-                  )}
-                  {c.slug === "web-development" && (
-                    <p className="relative mt-3 text-xs leading-relaxed text-muted-foreground">
-                      HTML | CSS | JavaScript | React | Node.js | Express | PostgreSQL
-                      | APIs | Docker
+                      {c.skills.join(" | ")}
                     </p>
                   )}
                   <div className="relative mt-6 flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5">
                       <Clock className="h-3.5 w-3.5" />
-                      {c.slug === "full-stack-development" ||
-                      c.slug === "data-analytics" ||
-                      c.slug === "machine-learning" ||
-                      c.slug === "artificial-intelligence" ||
-                      c.slug === "cloud-computing" ||
-                      c.slug === "web-development" ||
-                      c.slug === "git-github" ||
-                      c.slug === "sql-database-management"
-                        ? "90 Days"
-                        : c.duration}
+                      {c.slug === "git-github"
+                        ? "2 Days"
+                        : c.slug === "python-programming" ||
+                            c.slug === "full-stack-development" ||
+                            c.slug === "data-analysis" ||
+                            c.slug === "data-analytics" ||
+                            c.slug === "machine-learning" ||
+                            c.slug === "artificial-intelligence" ||
+                            c.slug === "cloud-computing" ||
+                            c.slug === "web-development" ||
+                            c.slug === "sql-database-management"
+                          ? "100 Days"
+                          : c.duration}
                     </span>
                     <span className="inline-flex items-center gap-1.5">
                       <GraduationCap className="h-3.5 w-3.5" />
@@ -157,6 +165,7 @@ function CoursesPage() {
                       View Course{" "}
                       <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                     </span>
+                  </div>
                   </div>
                 </Link>
               </Reveal>

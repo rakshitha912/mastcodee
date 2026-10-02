@@ -125,6 +125,7 @@ function AboutIntro() {
     { icon: Code2, label: "Technical Training", detail: "Hands-on. Industry-ready." },
     { icon: TrendingUp, label: "Digital Growth", detail: "Build your online presence." },
   ];
+  const headlineWords = "Your Growth Partner for Skills, Careers & Business".split(" ");
 
   return (
     <section className="relative overflow-hidden border-b border-border bg-white">
@@ -150,12 +151,36 @@ function AboutIntro() {
         <div className="flex items-center px-6 py-12 md:px-10 md:py-16 lg:px-14">
           <div className="w-full max-w-2xl">
             <p className="inline-flex rounded-full border border-primary/10 bg-primary/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">About MastCode</p>
-            <h1 className="mt-4 max-w-xl font-display text-4xl font-bold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl">
-              Your Growth Partner for Skills, Careers &amp; Business
+            <h1
+              aria-label="Your Growth Partner for Skills, Careers & Business"
+              className="mt-4 max-w-xl font-display text-4xl font-bold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
+            >
+              {headlineWords.map((word, index) => (
+                <span
+                  key={`${word}-${index}`}
+                  aria-hidden="true"
+                  className="mastcode-word-reveal"
+                  style={{ animationDelay: `${index * 85}ms` }}
+                >
+                  {word}
+                </span>
+              ))}
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
               MastCode helps students, professionals, institutions, and businesses move forward with practical skills, clear guidance, and digital solutions.
             </p>
+            <div className="mastcode-recruitment-callout mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/15 bg-primary/5 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex rounded-md bg-white p-2 text-primary shadow-sm" aria-hidden="true">
+                  <Briefcase className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Recruitment services</p>
+                  <p className="text-xs text-muted-foreground">Straightforward, per-application pricing</p>
+                </div>
+              </div>
+              <p className="font-display text-lg font-bold text-primary">₹100 per application</p>
+            </div>
             <div className="mt-7 grid gap-3 sm:grid-cols-3">
               {audienceCards.map(({ icon: Icon, title, text, tone }) => (
                 <article key={title} className="rounded-xl border border-border bg-white/80 p-4 shadow-sm backdrop-blur-sm">
@@ -927,13 +952,13 @@ function BookCallSection() {
             </div>
 
             <div className="mt-8 space-y-4">
-              <a href="mailto:rakshithamastcode@gmail.com" className="group flex items-center gap-4 rounded-xl border border-border bg-secondary p-4 transition hover:border-primary/35 hover:bg-white">
+              <a href="mailto:contact@mastcode.in" className="group flex items-center gap-4 rounded-xl border border-border bg-secondary p-4 transition hover:border-primary/35 hover:bg-white">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border bg-white text-primary">
                   <Mail className="h-5 w-5" />
                 </span>
                 <span>
                   <span className="block text-sm font-medium text-muted-foreground">Email Us</span>
-                  <span className="block break-all text-base font-semibold text-foreground group-hover:text-primary">rakshithamastcode@gmail.com</span>
+                  <span className="block break-all text-base font-semibold text-foreground group-hover:text-primary">contact@mastcode.in</span>
                 </span>
               </a>
               <a href="tel:+917019161991" className="group flex items-center gap-4 rounded-xl border border-border bg-secondary p-4 transition hover:border-primary/35 hover:bg-white">
@@ -943,15 +968,6 @@ function BookCallSection() {
                 <span>
                   <span className="block text-sm font-medium text-muted-foreground">Call / WhatsApp</span>
                   <span className="block text-base font-semibold text-foreground group-hover:text-primary">+91 7019161991</span>
-                </span>
-              </a>
-              <a href="tel:+917483645279" className="group flex items-center gap-4 rounded-xl border border-border bg-secondary p-4 transition hover:border-primary/35 hover:bg-white">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-border bg-white text-primary">
-                  <Phone className="h-5 w-5" />
-                </span>
-                <span>
-                  <span className="block text-sm font-medium text-muted-foreground">Alternate Call / WhatsApp</span>
-                  <span className="block text-base font-semibold text-foreground group-hover:text-primary">+91 7483 645 279</span>
                 </span>
               </a>
             </div>

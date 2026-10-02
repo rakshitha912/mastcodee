@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, CheckCircle2, ChevronDown, Mail, MessageSquareText, Minimize2, RefreshCw, SendHorizonal, ShieldAlert, Sparkles, X } from "lucide-react";
 import { submitJsonForm } from "@/lib/form-submit";
 
-const CONTACT_EMAIL = "rakshithamastcode@gmail.com";
+const CONTACT_EMAIL = "contact@mastcode.in";
 const MASTCODE_LOGO_URL = "/og/mast_code_logo_2_corrected.png";
 const DEFAULT_SUGGESTIONS = [
   "Courses & Training",
@@ -24,7 +24,7 @@ const COURSE_SUGGESTIONS = [
   "Machine Learning",
   "Data Analytics",
   "Cloud Computing",
-  "Git & GitHub",
+  "Git, GitHub & LinkedIn",
 ] as const;
 
 const COMPACT_SUGGESTION_LABELS: Record<string, string> = {
@@ -36,7 +36,7 @@ const COMPACT_SUGGESTION_LABELS: Record<string, string> = {
   "Machine Learning": "ML",
   "Data Analytics": "Data",
   "Cloud Computing": "Cloud",
-  "Git & GitHub": "GitHub",
+  "Git, GitHub & LinkedIn": "Git, GitHub & LinkedIn",
   "Career Guidance": "Guidance",
   "Contact MastCode": "Contact",
   "Courses & Training": "Courses",
@@ -57,7 +57,7 @@ const COURSE_DETAILS: Record<string, {
 }> = {
   "full stack development": {
     title: "Full Stack Development",
-    duration: "90 days",
+    duration: "100 days",
     level: "Beginner to intermediate",
     overview:
       "Learn frontend, backend, databases, authentication, APIs, deployment, and project workflow through practical full-stack projects.",
@@ -67,7 +67,7 @@ const COURSE_DETAILS: Record<string, {
   },
   "web development": {
     title: "Web Development",
-    duration: "90 days",
+    duration: "100 days",
     level: "Beginner friendly",
     overview:
       "Build responsive websites and modern web applications from fundamentals to React-based interfaces.",
@@ -77,7 +77,7 @@ const COURSE_DETAILS: Record<string, {
   },
   "python programming": {
     title: "Python Programming",
-    duration: "Flexible batch duration",
+    duration: "100 days",
     level: "Beginner friendly",
     overview:
       "Start with Python fundamentals and progress into problem solving, automation, data handling, and practical scripts.",
@@ -87,7 +87,7 @@ const COURSE_DETAILS: Record<string, {
   },
   "sql & database management": {
     title: "SQL & Database Management",
-    duration: "90 days",
+    duration: "100 days",
     level: "Beginner to intermediate",
     overview:
       "Learn relational database concepts, SQL queries, schema design, joins, aggregation, and query optimization basics.",
@@ -97,7 +97,7 @@ const COURSE_DETAILS: Record<string, {
   },
   "artificial intelligence": {
     title: "Artificial Intelligence",
-    duration: "90 days",
+    duration: "100 days",
     level: "Foundation to applied",
     overview:
       "Build AI fundamentals with Python, machine learning concepts, generative AI basics, LLM workflows, and applied projects.",
@@ -107,7 +107,7 @@ const COURSE_DETAILS: Record<string, {
   },
   "machine learning": {
     title: "Machine Learning",
-    duration: "90 days",
+    duration: "100 days",
     level: "Intermediate",
     overview:
       "Learn the machine learning workflow from data preparation to model training, evaluation, and applied use cases.",
@@ -117,7 +117,7 @@ const COURSE_DETAILS: Record<string, {
   },
   "data analytics": {
     title: "Data Analytics",
-    duration: "90 days",
+    duration: "100 days",
     level: "Beginner to intermediate",
     overview:
       "Learn how to clean, analyze, visualize, and present data for practical business and career use cases.",
@@ -127,7 +127,7 @@ const COURSE_DETAILS: Record<string, {
   },
   "cloud computing": {
     title: "Cloud Computing",
-    duration: "90 days",
+    duration: "100 days",
     level: "Foundation to intermediate",
     overview:
       "Understand cloud fundamentals, Linux, deployment, containers, DevOps basics, and modern infrastructure workflows.",
@@ -135,15 +135,15 @@ const COURSE_DETAILS: Record<string, {
     outcome:
       "You can understand cloud architecture and deploy projects with modern cloud tooling.",
   },
-  "git & github": {
-    title: "Git & GitHub",
-    duration: "Short practical module",
+  "git, github & linkedin": {
+    title: "Git, GitHub & LinkedIn",
+    duration: "2 days",
     level: "Beginner friendly",
     overview:
-      "Learn version control, Git commands, GitHub repositories, branches, pull requests, and collaboration workflow.",
-    skills: ["Git", "GitHub", "Commits", "Branches", "Pull requests", "Collaboration"],
+      "Learn Git and GitHub workflows, build a documented project, and present it professionally on LinkedIn. Day 1 includes a midpoint mock interview; Day 2 ends with a practical test.",
+    skills: ["Git", "GitHub", "LinkedIn", "Commits", "Branches", "Pull requests", "Portfolio"],
     outcome:
-      "You can manage code professionally and collaborate using GitHub.",
+      "You can manage code professionally, collaborate using GitHub, and present your project on LinkedIn.",
   },
 };
 
@@ -186,13 +186,16 @@ function createReply(input: string, context: { lastTopic: string | null }): {
   const value = input.trim();
   const lower = value.toLowerCase();
   const normalized = normalizeTopic(value);
-  const selectedCourse = COURSE_DETAILS[normalized];
+  const selectedCourse = COURSE_DETAILS[normalized] ??
+    (["git & github", "git and github", "github and linkedin"].includes(normalized)
+      ? COURSE_DETAILS["git, github & linkedin"]
+      : undefined);
 
   if (selectedCourse) {
     context.lastTopic = "training";
     return {
       text:
-        `${selectedCourse.title}\n\nDuration: ${selectedCourse.duration}\nLevel: ${selectedCourse.level}\n\n${selectedCourse.overview}\n\nSkills covered: ${selectedCourse.skills.join(", ")}.\n\nOutcome: ${selectedCourse.outcome}\n\nWould you like to view another course or contact MastCode for admission guidance?`,
+        `${selectedCourse.title}\n\nDuration: ${selectedCourse.duration}\nLevel: ${selectedCourse.level}\n\n${selectedCourse.duration === "100 days" ? "Weekly schedule: five class days, a test on Day 6, and Day 7 off. Includes a midpoint mock interview on Class Day 50.\n\n" : ""}${selectedCourse.overview}\n\nSkills covered: ${selectedCourse.skills.join(", ")}.\n\nOutcome: ${selectedCourse.outcome}\n\nWould you like to view another course or contact MastCode for admission guidance?`,
       quickReplies: [...COURSE_SUGGESTIONS, "Career Guidance", "Contact MastCode"],
       ctas: [
         { label: "Contact MastCode", href: `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`${selectedCourse.title} Course Enquiry`)}` },
@@ -288,7 +291,7 @@ function createReply(input: string, context: { lastTopic: string | null }): {
   if (/(contact|email|call|reach|connect|how to connect|talk to mastcode|where to contact)/i.test(lower)) {
     return {
       text:
-        "You can contact MastCode directly at: rakshithamastcode@gmail.com\n\nIf you’d like, I can also help you connect with the right team based on your request.",
+        "You can contact MastCode directly at: contact@mastcode.in\n\nIf you’d like, I can also help you connect with the right team based on your request.",
       quickReplies: ["Career Guidance", "College Partnerships", "Business Services"],
       ctas: [
         { label: "Contact MastCode", href: `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("MastCode Support")}` },
@@ -483,7 +486,7 @@ export function MastCodeAIChatbot() {
     }
 
     try {
-      await submitJsonForm({
+      const result = await submitJsonForm({
         form_type: "chatbot_lead",
         full_name: leadForm.name.trim(),
         email: leadForm.email.trim(),
@@ -492,6 +495,18 @@ export function MastCodeAIChatbot() {
         conversation_topic: leadTopic,
         message: leadForm.message.trim(),
       });
+
+      if (result?.whatsappFallback) {
+        addMessage(
+          "assistant",
+          "Your WhatsApp message is ready. Tap Send in WhatsApp to submit it.",
+          ["Contact MastCode", "Courses & Training", "Business Services"],
+        );
+        setLeadForm({ name: "", email: "", phone: "", interestedService: leadTopic, message: "" });
+        setShowLeadForm(false);
+        setSubmitted(true);
+        return;
+      }
     } catch (error) {
       addMessage(
         "assistant",

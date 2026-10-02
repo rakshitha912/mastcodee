@@ -10,18 +10,22 @@ import {
   GitCommitHorizontal,
   GitPullRequest,
   GraduationCap,
+  Instagram,
+  Linkedin,
   Mail,
   Merge,
   Network,
+  Phone,
   Search,
   UserRound,
   Workflow,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { SiteFooter, SiteNav } from "@/components/site-chrome";
 import { Reveal } from "@/components/Reveal";
-import { compressCurriculumTo90Days, fullStackCurriculum, group90DayCurriculumByWeek, type CourseWeekReport } from "@/lib/course-curricula";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { build100DayCurriculum, fullStackCurriculum, group100DayCurriculumByWeek, type CourseMonth, type CourseWeekReport } from "@/lib/course-curricula";
 import { dataAnalysisCurriculum } from "@/lib/data-analysis-curriculum";
 import { machineLearningCurriculum } from "@/lib/machine-learning-curriculum";
 import { artificialIntelligenceCurriculum } from "@/lib/artificial-intelligence-curriculum";
@@ -29,9 +33,9 @@ import { cloudComputingCurriculum } from "@/lib/cloud-computing-curriculum";
 import { gitGithubCurriculum } from "@/lib/git-github-curriculum";
 import { sqlDataManagementCurriculum } from "@/lib/sql-data-management-curriculum";
 import { webDevelopmentCurriculum } from "@/lib/web-development-curriculum";
-import { courseQuery, courseWeeksQuery, getCoursePrice, type CourseWeek } from "@/lib/queries";
+import { applicationFormQuery, courseQuery, courseWeeksQuery, getCoursePrice, getManagedCourses, type Course, type CourseWeek } from "@/lib/queries";
 import { socialMeta } from "@/lib/site";
-import { submitJsonForm } from "@/lib/form-submit";
+import { submitMultipartForm } from "@/lib/form-submit";
 
 export const Route = createFileRoute("/courses/$slug")({
   loader: async ({ context, params }) => {
@@ -321,56 +325,65 @@ const pythonCurriculum = [
   },
 ];
 
-const pythonCurriculumDownload = `MastCode - Python Programming
-Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
+function buildCourseCurriculumDownload(courseTitle: string, curriculum: CourseMonth[]) {
+  const weeks = group100DayCurriculumByWeek(build100DayCurriculum(curriculum));
+  return `MastCode - ${courseTitle}
+100 Class Days | Full weeks: 5 class days + Day 6 test + Day 7 rest
+Mid-course mock interview: Class Day 50
 
-${pythonCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
+${weeks.map((week) => [
+    `Week ${week.week} (Class Days ${week.startDay}-${week.endDay}): ${week.title}`,
+    `Schedule: ${week.scheduleLabel}`,
+    `Topics: ${week.topics.join(" | ")}`,
+    week.practicalTasks.length ? `Practical tasks: ${week.practicalTasks.join(" | ")}` : "",
+    week.assignments.length ? `Assignments: ${week.assignments.join(" | ")}` : "",
+    week.miniProjects.length ? `Projects: ${week.miniProjects.join(" | ")}` : "",
+    `Day 6 test topics: ${week.assessmentTopics.join(" | ")}`,
+    `Day 6 test: ${week.assessmentTask}`,
+    week.mockInterview ? `Mid-course mock interview: ${week.mockInterview}` : "",
+    `Day 7 rest: ${week.restDayNote}`,
+    `Outcomes: ${week.outcomes.join(" | ")}`,
+  ].filter(Boolean).join("\n")).join("\n\n")}`;
+}
 
-const fullStackCurriculumDownload = `MastCode - Full Stack Development
-Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
+const pythonCurriculumDownload = buildCourseCurriculumDownload("Python Programming", pythonCurriculum);
+const fullStackCurriculumDownload = buildCourseCurriculumDownload("Full Stack Development", fullStackCurriculum);
+const dataAnalysisCurriculumDownload = buildCourseCurriculumDownload("Data Analysis", dataAnalysisCurriculum);
+const machineLearningCurriculumDownload = buildCourseCurriculumDownload("Machine Learning", machineLearningCurriculum);
+const artificialIntelligenceCurriculumDownload = buildCourseCurriculumDownload("Artificial Intelligence", artificialIntelligenceCurriculum);
+const cloudComputingCurriculumDownload = buildCourseCurriculumDownload("Cloud Computing", cloudComputingCurriculum);
 
-${fullStackCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
+const gitGithubCurriculumDownload = `MastCode - Git, GitHub & LinkedIn
+2 Days | Beginner
 
-const dataAnalysisCurriculumDownload = `MastCode - Data Analysis
-Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
+${gitGithubCurriculum[0].weeks.map((day) => `${day.title}\n${day.topics.map((topic) => `- ${topic}`).join("\n")}\nPractical task: ${day.practicalTask ?? "-"}\nAssignment: ${day.assignment ?? "-"}\nProject: ${day.miniProject ?? "-"}\nOutcome: ${day.expectedOutcome}`).join("\n\n")}`;
 
-${dataAnalysisCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
-
-const machineLearningCurriculumDownload = `MastCode - Machine Learning
-Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
-
-${machineLearningCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
-
-const artificialIntelligenceCurriculumDownload = `MastCode - Artificial Intelligence
-Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
-
-${artificialIntelligenceCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
-
-const cloudComputingCurriculumDownload = `MastCode - Cloud Computing
-Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
-
-${cloudComputingCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
-
-const gitGithubCurriculumDownload = `MastCode - Git & GitHub
-1 Month | 4 Weeks | Beginner to Intermediate
-
-${gitGithubCurriculum[0].weeks.map((week, index) => `Week ${index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n\n")}`;
-
-const sqlDataManagementCurriculumDownload = `MastCode - SQL & Data Management Systems
-2 Months | 8 Weeks | Beginner to Advanced
-
-${sqlDataManagementCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
-
-const webDevelopmentCurriculumDownload = `MastCode - Web Development
-Complete 6-Month Curriculum - Intensive 90-Day Program | Beginner to Advanced
-
-${webDevelopmentCurriculum.map((month) => `Month ${month.month} - ${month.monthName}\n${month.weeks.map((week, index) => `Week ${(month.month - 1) * 4 + index + 1} - ${week.title}\n${week.topics.map((topic) => `- ${topic}`).join("\n")}`).join("\n")}`).join("\n\n")}`;
+const sqlDataManagementCurriculumDownload = buildCourseCurriculumDownload("SQL & Data Management Systems", sqlDataManagementCurriculum);
+const webDevelopmentCurriculumDownload = buildCourseCurriculumDownload("Web Development", webDevelopmentCurriculum);
 
 function CourseDetail() {
   const { slug } = Route.useParams();
   const { data } = useSuspenseQuery(courseQuery(slug));
-  const c = data!;
+  const [browserCourseState, setBrowserCourseState] = useState<{ slug: string; course: Course | null } | null>(null);
+  useEffect(() => {
+    const syncCourse = () => {
+      setBrowserCourseState({
+        slug,
+        course: getManagedCourses().find((course) => course.slug === slug && course.status === "published") ?? null,
+      });
+    };
+    syncCourse();
+    window.addEventListener("storage", syncCourse);
+    window.addEventListener("mastcode-courses-updated", syncCourse);
+    return () => {
+      window.removeEventListener("storage", syncCourse);
+      window.removeEventListener("mastcode-courses-updated", syncCourse);
+    };
+  }, [slug]);
+  const c = browserCourseState?.slug === slug ? browserCourseState.course : data;
+  if (!c) throw notFound();
   const { data: storedWeeks } = useSuspenseQuery(courseWeeksQuery(c.id));
+  const { data: enrollmentForm } = useSuspenseQuery(applicationFormQuery("course_registration"));
   const [enrollmentSubmitted, setEnrollmentSubmitted] = useState(false);
   const [enrollmentSubmitting, setEnrollmentSubmitting] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState("");
@@ -393,11 +406,7 @@ function CourseDetail() {
     isGitGithubCourse ||
     isSqlCourse ||
     isWebDevelopmentCourse;
-  const displayTitle = isDataAnalysisCourse
-    ? "Data Analysis"
-    : isSqlCourse
-      ? "SQL & Data Management Systems"
-      : c.title;
+  const displayTitle = c.title;
   const fallbackCurriculum = isPythonCourse
     ? pythonCurriculum
     : isDataAnalysisCourse
@@ -415,8 +424,8 @@ function CourseDetail() {
                 : isWebDevelopmentCourse
                   ? webDevelopmentCurriculum
                   : fullStackCurriculum;
-  const curriculum = storedWeeks.length > 0 ? courseWeeksToMonths(storedWeeks) : fallbackCurriculum;
-  const intensiveWeeks = group90DayCurriculumByWeek(compressCurriculumTo90Days(curriculum));
+  const curriculum = isGitGithubCourse ? fallbackCurriculum : storedWeeks.length > 0 ? courseWeeksToMonths(storedWeeks) : fallbackCurriculum;
+  const intensiveWeeks = isGitGithubCourse ? [] : group100DayCurriculumByWeek(build100DayCurriculum(curriculum));
   const curriculumDownload = isPythonCourse
     ? pythonCurriculumDownload
     : isDataAnalysisCourse
@@ -434,42 +443,26 @@ function CourseDetail() {
                 : isWebDevelopmentCourse
                   ? webDevelopmentCurriculumDownload
                   : fullStackCurriculumDownload;
-  const courseMeta = hasCurriculum
-    ? [
-        { icon: Clock, text: "90 Days" },
-        {
-          icon: GraduationCap,
-          text: isGitGithubCourse ? "Beginner to Intermediate" : "Beginner to Advanced",
-        },
-        ...(isFullStackCourse ? [{ icon: null, text: "Training + Practical Projects" }] : []),
-        ...(isDataAnalysisCourse
-          ? [{ icon: null, text: "Excel | SQL | Python | Power BI" }]
-          : []),
-        ...(isMachineLearningCourse
-          ? [{ icon: null, text: "Python | Scikit-learn | TensorFlow | NLP" }]
-          : []),
-        ...(isArtificialIntelligenceCourse
-          ? [{ icon: null, text: "Python | GenAI | LLMs | RAG | AI Agents" }]
-          : []),
-        ...(isCloudComputingCourse
-          ? [{ icon: null, text: "AWS | Azure | Linux | Docker | Kubernetes" }]
-          : []),
-        ...(isGitGithubCourse
-          ? [{ icon: null, text: "Git | GitHub | Branching | Collaboration" }]
-          : []),
-        ...(isSqlCourse
-          ? [{ icon: null, text: "SQL | MySQL | PostgreSQL | DBMS" }]
-          : []),
-        ...(isWebDevelopmentCourse
-          ? [{ icon: null, text: "HTML | CSS | JavaScript | React | Node.js" }]
-          : []),
-      ]
-    : [
-        { icon: Clock, text: c.duration },
-        { icon: GraduationCap, text: c.level },
-        { icon: null, text: c.language },
-        ...(c.instructor ? [{ icon: UserRound, text: c.instructor }] : []),
-      ];
+  const courseDurationLabel =
+    c.slug === "python-programming" ||
+    c.slug === "full-stack-development" ||
+    c.slug === "data-analysis" ||
+    c.slug === "data-analytics" ||
+    c.slug === "machine-learning" ||
+    c.slug === "artificial-intelligence" ||
+    c.slug === "cloud-computing" ||
+    c.slug === "web-development" ||
+    c.slug === "sql-database-management"
+      ? "100 Days"
+      : isGitGithubCourse ? "2 Days" : c.duration;
+
+  const courseMeta = [
+    { icon: Clock, text: courseDurationLabel },
+    { icon: GraduationCap, text: c.level },
+    { icon: null, text: c.language },
+    ...(c.instructor ? [{ icon: UserRound, text: c.instructor }] : []),
+  ];
+  const descriptionParagraphs = (c.full_description ?? c.short_description ?? "").split("\n").filter(Boolean);
 
   return (
     <>
@@ -493,23 +486,7 @@ function CourseDetail() {
                 {displayTitle}
               </h1>
               <p className="mt-5 max-w-3xl text-lg leading-relaxed text-muted-foreground">
-                {isPythonCourse
-                  ? "Master Python from the fundamentals to real-world development through hands-on coding, data analysis, APIs, automation, machine learning, projects, and career preparation."
-                  : isFullStackCourse
-                    ? "Master full-stack web development by learning how to design, develop, connect, secure, test, and deploy complete web applications."
-                    : isDataAnalysisCourse
-                      ? "Learn how to transform raw data into meaningful insights and business decisions. This 6-month program covers Excel, SQL, Python, NumPy, Pandas, data cleaning, statistics, exploratory data analysis, data visualization, Power BI, dashboards, and real-world analytics projects."
-                      : isMachineLearningCourse
-                        ? "Learn Machine Learning from the fundamentals to real-world AI application development. This 6-month program covers Python, statistics, data preprocessing, supervised and unsupervised learning, deep learning, NLP, model deployment, and end-to-end projects."
-                        : isArtificialIntelligenceCourse
-                          ? "Learn Artificial Intelligence from the fundamentals to building real-world AI applications. This 6-month program covers Python, machine learning, deep learning, NLP, computer vision, generative AI, LLMs, AI agents, deployment, and end-to-end projects."
-                          : isCloudComputingCourse
-                            ? "Learn cloud computing from the fundamentals to real-world cloud infrastructure and application deployment. This 6-month program covers Linux, networking, AWS, Azure, security, Docker, Kubernetes, CI/CD, Terraform, monitoring, and cloud deployment."
-                            : isGitGithubCourse
-                              ? "Learn Git and GitHub from the fundamentals to professional project collaboration. Manage code, track changes, collaborate with teams, resolve conflicts, and maintain portfolio-ready projects."
-                              : isSqlCourse
-                                ? "Learn SQL and Database Management Systems from the fundamentals to advanced database development. This program covers database design, queries, normalization, security, optimization, and real-world projects."
-                                : "Learn modern web development from the fundamentals to building and deploying complete full-stack web applications through the complete 6-month curriculum delivered as an intensive 90-day program."}
+                {c.short_description}
               </p>
             </Reveal>
             <Reveal delay={160} className="mt-8 flex flex-wrap gap-3">
@@ -522,6 +499,11 @@ function CourseDetail() {
                 </span>
               ))}
             </Reveal>
+            {c.thumbnail_path && (
+              <Reveal delay={200} className="mt-8 overflow-hidden rounded-xl border border-border">
+                <img src={c.thumbnail_path} alt={`${c.title} course`} loading="eager" decoding="async" className="max-h-80 w-full object-cover" />
+              </Reveal>
+            )}
           </div>
         </section>
 
@@ -529,35 +511,7 @@ function CourseDetail() {
           <Reveal>
             <h2 className="font-display text-2xl font-semibold">Course Description</h2>
             <div className="mt-5 space-y-4 leading-relaxed text-muted-foreground">
-              {(isPythonCourse ||
-              isFullStackCourse ||
-              isDataAnalysisCourse ||
-              isMachineLearningCourse ||
-              isArtificialIntelligenceCourse ||
-              isCloudComputingCourse ||
-              isGitGithubCourse ||
-              isSqlCourse
-                ? [
-                    isPythonCourse
-                      ? "Master Python from the fundamentals to real-world development through hands-on coding, data analysis, APIs, automation, machine learning, projects, and career preparation."
-                      : isFullStackCourse
-                        ? "Master full-stack web development by learning how to design, develop, connect, secure, test, and deploy complete web applications."
-                        : isDataAnalysisCourse
-                          ? "Learn how to transform raw data into meaningful insights and business decisions. Students work with practical datasets and complete portfolio-ready projects throughout the program."
-                          : isMachineLearningCourse
-                            ? "Learn Machine Learning from the fundamentals to real-world AI application development, model deployment, and end-to-end projects."
-                            : isArtificialIntelligenceCourse
-                              ? "Learn Artificial Intelligence from the fundamentals to building real-world AI applications. Students will build multiple practical projects and finish with a portfolio-ready AI capstone project."
-                              : isCloudComputingCourse
-                                ? "Learn cloud computing from the fundamentals to real-world cloud infrastructure and application deployment. Students will perform hands-on cloud labs and build portfolio-ready cloud projects."
-                                : isSqlCourse
-                                  ? "Learn SQL and Database Management Systems from the fundamentals to advanced database development. Students will work with practical databases and build a complete database management project."
-                                  : isWebDevelopmentCourse
-                                    ? "Learn modern web development from the fundamentals to building and deploying complete full-stack web applications. Students will complete multiple mini-projects and a final full-stack capstone project."
-                                    : "Learn Git and GitHub from the fundamentals to professional project collaboration. Build a strong GitHub portfolio through practical workflows and projects.",
-                  ]
-                : c.full_description.split("\n").filter(Boolean)
-              ).map((p, i) => (
+              {descriptionParagraphs.map((p, i) => (
                 <p key={i}>{p}</p>
               ))}
             </div>
@@ -568,7 +522,7 @@ function CourseDetail() {
                 {getCoursePrice(c).toLocaleString("en-IN")}
               </p>
               {enrollmentSubmitted ? (
-                <p className="mt-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">Your enrollment request was saved successfully. Our team will contact you shortly.</p>
+                <p className="mt-6 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">{enrollmentForm.successMessage}</p>
               ) : (
                 <form className="mt-6 space-y-3" onSubmit={async (event) => {
                   event.preventDefault();
@@ -576,34 +530,40 @@ function CourseDetail() {
                   setEnrollmentError("");
                   const form = new FormData(event.currentTarget);
                   try {
-                    await submitJsonForm({
-                    form_type: "course_registration",
-                    service_type: "course_registration",
-                    full_name: String(form.get("full_name") || ""),
-                    email: String(form.get("email") || ""),
-                    phone: String(form.get("phone") || ""),
-                    course_id: c.id,
-                    course_slug: c.slug,
-                    course_title: c.title,
-                    message: String(form.get("message") || ""),
-                    });
+                    form.set("form_type", "course_registration");
+                    form.set("service_type", "course_registration");
+                    form.set("course_id", c.id);
+                    form.set("course_slug", c.slug);
+                    form.set("course_title", c.title);
+                    form.set("message", String(form.get("message") || ""));
+                    await submitMultipartForm(form);
                     setEnrollmentSubmitted(true);
                   } catch (error) {
                     setEnrollmentError(error instanceof Error ? error.message : "Unable to save your enrollment request.");
                   }
                   setEnrollmentSubmitting(false);
                 }}>
-                  <input name="full_name" required placeholder="Full Name" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent" />
-                  <input name="email" type="email" required placeholder="Email Address" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent" />
-                  <input name="phone" type="tel" required placeholder="Phone Number" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent" />
-                  <textarea name="message" rows={3} placeholder="Additional message" className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent" />
+                  <h2 className="font-display text-lg font-semibold">{enrollmentForm.title}</h2>
+                  <p className="text-xs leading-relaxed text-muted-foreground">{enrollmentForm.description}</p>
+                  {enrollmentForm.fields.map((field) => (
+                    <label key={field.name} className="block text-xs font-medium text-foreground">
+                      {field.label}
+                      {field.type === "textarea" ? (
+                        <textarea name={field.name} required={field.required} rows={3} placeholder={field.placeholder} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent" />
+                      ) : field.type === "select" ? (
+                        <select name={field.name} required={field.required} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent">
+                          <option value="">Select an option</option>
+                          {(field.options ?? []).map((option) => <option key={option}>{option}</option>)}
+                        </select>
+                      ) : (
+                        <input name={field.name} type={field.type} required={field.required} placeholder={field.placeholder} className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-accent" />
+                      )}
+                    </label>
+                  ))}
                   {enrollmentError && <p className="text-xs text-red-400">{enrollmentError}</p>}
-                  <button type="submit" disabled={enrollmentSubmitting} className="flex w-full items-center justify-center rounded-md bg-primary px-5 py-3 font-semibold text-primary-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60">{enrollmentSubmitting ? "Submitting..." : "Enroll now"}</button>
+                  <button type="submit" disabled={enrollmentSubmitting} className="flex w-full items-center justify-center rounded-md bg-primary px-5 py-3 font-semibold text-primary-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60">{enrollmentSubmitting ? "Submitting..." : enrollmentForm.submitLabel}</button>
                 </form>
               )}
-              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-                Mentor-led sessions, real project briefs, and placement support.
-              </p>
             </aside>
           </Reveal>
         </section>
@@ -612,12 +572,12 @@ function CourseDetail() {
           <section className="mx-auto max-w-5xl space-y-10 px-6 pb-16">
             <Reveal>
               <h2 className="font-display text-3xl font-bold">
-                {isGitGithubCourse ? "1-Month / 4-Week Curriculum" : "Complete 6-Month Curriculum — Intensive 90-Day Program"}
+                {isGitGithubCourse ? "2-Day Git, GitHub & LinkedIn Curriculum" : "100-Class-Day Curriculum"}
               </h2>
               <p className="mt-2 text-muted-foreground">
                 {isGitGithubCourse
-                  ? "A practical path from local commits to collaborative, portfolio-ready GitHub projects."
-                  : "The complete existing curriculum compressed into an intensive 90-day program and presented as a week-wise report. Every original module, topic, practical task, project, assessment, deployment activity, and placement outcome is retained."}
+                  ? "Two focused days to build a GitHub project portfolio and present it professionally on LinkedIn."
+                  : "Full weeks have five class days, a test on Day 6, and a rest day on Day 7. The 100-class-day plan includes a midpoint mock interview on Class Day 50."}
               </p>
             </Reveal>
             {isGitGithubCourse && (
@@ -708,7 +668,9 @@ function CourseDetail() {
               </Reveal>
             )}
             <div className="space-y-6">
-              {intensiveWeeks.map((week) => <WeeklyCurriculumItem key={week.week} week={week} />)}
+              {isGitGithubCourse
+                ? gitGithubCurriculum[0].weeks.map((day, index) => <GitGithubDayItem key={day.title} day={day} dayNumber={index + 1} />)
+                : intensiveWeeks.map((week) => <WeeklyCurriculumItem key={week.week} week={week} />)}
             </div>
             <Reveal className="flex flex-wrap gap-3 pt-2">
               <a
@@ -717,12 +679,40 @@ function CourseDetail() {
               >
                 Enroll Now
               </a>
-              <a
-                href="mailto:hello@mastcode.dev?subject=Python%20Programming%20Question"
-                className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-3 font-semibold transition-colors hover:border-accent hover:text-accent"
-              >
-                <Mail className="h-4 w-4" /> Contact Us
-              </a>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-3 font-semibold transition-colors hover:border-accent hover:text-accent"
+                  >
+                    <Mail className="h-4 w-4" /> Contact Us
+                  </button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md rounded-xl">
+                  <DialogHeader>
+                    <DialogTitle className="font-display text-2xl">Contact MastCode</DialogTitle>
+                    <DialogDescription>Choose the contact method that works best for you.</DialogDescription>
+                  </DialogHeader>
+                  <div className="mt-2 space-y-3">
+                    <a href="tel:+917019161991" className="flex items-center gap-4 rounded-lg border border-border bg-white p-4 transition-colors hover:border-primary/40 hover:bg-secondary">
+                      <Phone className="h-5 w-5 shrink-0 text-primary" />
+                      <span><span className="block text-sm font-semibold text-foreground">Phone</span><span className="text-sm text-muted-foreground">7019161991</span></span>
+                    </a>
+                    <a href="mailto:contact@mastcode.in" className="flex items-center gap-4 rounded-lg border border-border bg-white p-4 transition-colors hover:border-primary/40 hover:bg-secondary">
+                      <Mail className="h-5 w-5 shrink-0 text-primary" />
+                      <span><span className="block text-sm font-semibold text-foreground">Email</span><span className="text-sm text-muted-foreground">contact@mastcode.in</span></span>
+                    </a>
+                    <a href="https://www.instagram.com/mastcode_ai.in/" target="_blank" rel="noreferrer" className="flex items-center gap-4 rounded-lg border border-border bg-white p-4 transition-colors hover:border-primary/40 hover:bg-secondary">
+                      <Instagram className="h-5 w-5 shrink-0 text-primary" />
+                      <span><span className="block text-sm font-semibold text-foreground">Instagram</span><span className="text-sm text-muted-foreground">@mastcode_ai.in</span></span>
+                    </a>
+                    <a href="https://www.linkedin.com/in/rakshitha-s-619496247/?isSelfProfile=true" target="_blank" rel="noreferrer" className="flex items-center gap-4 rounded-lg border border-border bg-white p-4 transition-colors hover:border-primary/40 hover:bg-secondary">
+                      <Linkedin className="h-5 w-5 shrink-0 text-primary" />
+                      <span><span className="block text-sm font-semibold text-foreground">LinkedIn</span><span className="text-sm text-muted-foreground">Rakshitha S</span></span>
+                    </a>
+                  </div>
+                </DialogContent>
+              </Dialog>
               <a
                 href={`data:text/plain;charset=utf-8,${encodeURIComponent(curriculumDownload)}`}
                 download={`mastcode-${isPythonCourse ? "python" : isDataAnalysisCourse ? "data-analysis" : isMachineLearningCourse ? "machine-learning" : isArtificialIntelligenceCourse ? "artificial-intelligence" : isCloudComputingCourse ? "cloud-computing" : isGitGithubCourse ? "git-github" : "full-stack"}-curriculum.txt`}
@@ -736,6 +726,44 @@ function CourseDetail() {
       </main>
       <SiteFooter />
     </>
+  );
+}
+
+function GitGithubDayItem({ day, dayNumber }: { day: CourseMonth["weeks"][number]; dayNumber: number }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <Reveal>
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-colors hover:border-primary/40">
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((current) => !current)}
+          className="flex w-full items-center justify-between px-6 py-5 text-left transition-colors hover:bg-primary/5"
+        >
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Day {dayNumber}</p>
+            <h3 className="mt-1 font-display text-xl font-semibold">{day.title}</h3>
+            {!expanded && <p className="mt-1 text-sm text-muted-foreground">{day.topics.slice(0, 4).join(" | ")}</p>}
+          </div>
+          <ChevronDown className={`ml-4 h-5 w-5 shrink-0 text-accent transition-transform ${expanded ? "rotate-180" : ""}`} />
+        </button>
+        {expanded && (
+          <div className="animate-fade-in space-y-4 border-t border-border bg-secondary px-6 py-5">
+            <div>
+              <h4 className="text-sm font-semibold">Topics</h4>
+              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                {day.topics.map((topic, index) => <li key={`${topic}-${index}`}>- {topic}</li>)}
+              </ul>
+            </div>
+            <CurriculumListDetail label="Practical Task" values={day.practicalTask ? [day.practicalTask] : []} />
+            <CurriculumListDetail label="Assignment" values={day.assignment ? [day.assignment] : []} />
+            <CurriculumListDetail label="Mini Project" values={day.miniProject ? [day.miniProject] : []} />
+            <CurriculumListDetail label="Expected Outcome" values={[day.expectedOutcome]} />
+          </div>
+        )}
+      </div>
+    </Reveal>
   );
 }
 
@@ -753,8 +781,9 @@ function WeeklyCurriculumItem({ week }: { week: CourseWeekReport }) {
         >
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">{week.phase}</p>
-            <h3 className="mt-1 font-display text-xl font-semibold">Week {week.week}: Days {week.startDay}-{week.endDay}</h3>
+            <h3 className="mt-1 font-display text-xl font-semibold">Week {week.week}: Class Days {week.startDay}-{week.endDay}</h3>
             <p className="mt-1 text-sm font-medium text-foreground">{week.title}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{week.scheduleLabel}</p>
             {!expanded && <p className="mt-1 text-sm text-muted-foreground">{week.topics.join(" | ")}</p>}
           </div>
           <ChevronDown className={`ml-4 h-5 w-5 shrink-0 text-accent transition-transform ${expanded ? "rotate-180" : ""}`} />
@@ -771,6 +800,10 @@ function WeeklyCurriculumItem({ week }: { week: CourseWeekReport }) {
             <CurriculumListDetail label="Assignments" values={week.assignments} />
             <CurriculumListDetail label="Mini Projects" values={week.miniProjects} />
             <CurriculumListDetail label="Expected Outcomes" values={week.outcomes} />
+            <CurriculumListDetail label="Day 6 Test Topics" values={week.assessmentTopics} />
+            <CurriculumListDetail label="Day 6 Test" values={[week.assessmentTask]} />
+            <CurriculumListDetail label="Mid-Course Mock Interview" values={week.mockInterview ? [week.mockInterview] : []} />
+            <CurriculumListDetail label="Day 7 Rest" values={[week.restDayNote]} />
           </div>
         )}
       </div>
