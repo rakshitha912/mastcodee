@@ -85,6 +85,7 @@ function CoursesPage() {
           title="Build Skills."
           highlight="Build Your Future."
           description="Explore industry-focused technical training programs designed to help students and professionals build practical, job-ready skills."
+          backToServices
         />
         <section className="mx-auto max-w-7xl px-6 py-16">
           <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -104,7 +105,7 @@ function CoursesPage() {
                   params={{ slug: c.slug }}
                   className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
                 >
-                  <div className="aspect-[16/9] overflow-hidden bg-secondary">
+                  <div className="relative aspect-[16/9] overflow-hidden bg-secondary">
                     <img
                       src={c.thumbnail_path || courseImage(c.slug)}
                       alt=""
@@ -116,7 +117,7 @@ function CoursesPage() {
                           event.currentTarget.src = fallback;
                         }
                       }}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none"
                     />
                   </div>
                   <div className="relative flex flex-1 flex-col p-6">

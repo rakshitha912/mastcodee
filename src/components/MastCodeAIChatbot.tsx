@@ -1,9 +1,11 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Bot, CheckCircle2, ChevronDown, Mail, MessageSquareText, Minimize2, RefreshCw, SendHorizonal, ShieldAlert, Sparkles, X } from "lucide-react";
+import { Bot, CheckCircle2, ChevronDown, Maximize2, MessageSquareText, Minimize2, RefreshCw, SendHorizonal, ShieldAlert, Sparkles, X } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { submitJsonForm } from "@/lib/form-submit";
+import { ASSETS } from "@/lib/assets";
 
 const CONTACT_EMAIL = "contact@mastcode.in";
-const MASTCODE_LOGO_URL = "/og/mast_code_logo_2_corrected.png";
+const MASTCODE_LOGO_URL = ASSETS.LOGO;
 const DEFAULT_SUGGESTIONS = [
   "Courses & Training",
   "Career Guidance",
@@ -359,6 +361,7 @@ function createReply(input: string, context: { lastTopic: string | null }): {
 export function MastCodeAIChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -449,9 +452,28 @@ export function MastCodeAIChatbot() {
     }, 550);
   };
 
+  const openLeadForm = (topic: string) => {
+    setLeadTopic(topic);
+    setLeadForm({ name: "", email: "", phone: "", interestedService: topic, message: "" });
+    setSubmitted(false);
+    setShowLeadForm(true);
+  };
+
   const handleQuickAction = (action: string) => {
-    if (action === "Contact MastCode") {
-      window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent("MastCode Assistant Enquiry")}`;
+    const normalizedAction = action.trim().toLowerCase();
+    if (/^(contact mastcode|connect mastcode|talk to mastcode|contact our team|contact the mastcode team|discuss my project)$/.test(normalizedAction)) {
+      const topic = normalizedAction === "discuss my project"
+        ? "Business Solutions"
+        : context.lastTopic === "training"
+          ? "Course Enquiry"
+          : context.lastTopic === "institution"
+            ? "Institution Partnership"
+            : context.lastTopic === "business"
+              ? "Business Solutions"
+              : context.lastTopic === "career"
+                ? "Career Guidance"
+                : "General Enquiry";
+      openLeadForm(topic);
       return;
     }
     addMessage("user", action);
@@ -481,7 +503,7 @@ export function MastCodeAIChatbot() {
 
   const handleLeadSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!leadForm.name.trim() || !leadForm.email.trim()) {
+    if (!leadForm.name.trim() || !leadForm.email.trim() || !leadForm.phone.trim()) {
       return;
     }
 
@@ -554,10 +576,17 @@ export function MastCodeAIChatbot() {
           setIsOpen(true);
           setIsMinimized(false);
         }}
-        className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 rounded-xl border border-border bg-white px-4 py-3 text-foreground shadow-md transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg ${isOpen ? "pointer-events-none translate-y-3 opacity-0" : "opacity-100"}`}
+        className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 rounded-xl border border-border bg-white px-4 py-3 text-foreground transition-all duration-300 hover:border-primary/40 ${isOpen ? "pointer-events-none translate-y-3 opacity-0" : "opacity-100"}`}
       >
         <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border border-border bg-secondary p-1.5">
-          <img src={MASTCODE_LOGO_URL} alt="MastCode logo" className="h-full w-full object-contain" />
+          <img
+            src={MASTCODE_LOGO_URL}
+            alt=""
+            onError={(event) => {
+              event.currentTarget.hidden = true;
+            }}
+            className="h-full w-full object-contain"
+          />
         </span>
         <span className="text-left">
           <span className="block text-sm font-bold tracking-wide">MastCode Assistant</span>
@@ -573,62 +602,70 @@ export function MastCodeAIChatbot() {
           role="dialog"
           aria-modal="false"
           aria-label="MastCode Assistant"
-          className={`overflow-hidden rounded-2xl border border-border bg-white text-foreground shadow-lg ${isMinimized ? "hidden" : "block"}`}
-          style={{ width: "min(410px, calc(100vw - 20px))", height: "min(620px, calc(100vh - 100px))" }}
+          className={`flex flex-col overflow-hidden rounded-2xl border border-border bg-white text-foreground ${isMinimized ? "hidden" : ""}`}
+          style={{
+            width: isExpanded ? "min(640px, calc(100vw - 20px))" : "min(410px, calc(100vw - 20px))",
+            height: isExpanded ? "min(820px, calc(100vh - 100px))" : "min(620px, calc(100vh - 100px))",
+          }}
         >
-          <div className="flex items-center justify-between border-b border-border bg-white px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg border border-border bg-secondary p-1.5">
-                <img src={MASTCODE_LOGO_URL} alt="MastCode logo" className="h-full w-full object-contain" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-bold text-foreground">MastCode Assistant</p>
-                  <span className="rounded-full border border-border bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">MastCode</span>
-                </div>
-                <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" /> Online - Ready to Help
-                </p>
-              </div>
+          <div className="flex min-w-0 shrink-0 items-center gap-2 border-b border-border bg-white px-3 py-2.5 max-[360px]:px-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-secondary p-1">
+              <img
+                src={MASTCODE_LOGO_URL}
+                alt=""
+                onError={(event) => {
+                  event.currentTarget.hidden = true;
+                }}
+                className="h-full w-full object-contain"
+              />
             </div>
-
-            <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-bold leading-4 text-foreground">MastCode Assistant</p>
+              <p className="flex items-center gap-1 whitespace-nowrap text-[10px] leading-4 text-muted-foreground">
+                <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                Online - Ready to Help
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full border border-border bg-secondary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-primary max-[380px]:hidden">
+              MastCode
+            </span>
+            <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
                 aria-label="Restart conversation"
                 onClick={clearChat}
-                className="rounded-lg border border-border bg-white p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-white text-muted-foreground transition hover:bg-secondary hover:text-foreground"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className="h-3.5 w-3.5" />
               </button>
               <button
                 type="button"
-                aria-label="Minimize chat"
-                onClick={() => setIsMinimized(true)}
-                className="rounded-lg border border-border bg-white p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+                aria-label={isExpanded ? "Restore chat size" : "Expand chat"}
+                onClick={() => setIsExpanded((expanded) => !expanded)}
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-white text-muted-foreground transition hover:bg-secondary hover:text-foreground"
               >
-                <Minimize2 className="h-4 w-4" />
+                {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
               </button>
               <button
                 type="button"
                 aria-label="Close chat"
                 onClick={() => setIsOpen(false)}
-                className="rounded-lg border border-border bg-white p-2 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-white text-muted-foreground transition hover:bg-secondary hover:text-foreground"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
 
-          <div className="flex h-[calc(100%-111px)] flex-col bg-secondary">
+          <div className="flex min-h-0 flex-1 flex-col bg-secondary">
             <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
               {messages.map((message) => (
                 <div key={message.id} className={`flex ${message.sender === "user" ? "justify-end" : "justify-start"}`}>
                   <div
                     className={`max-w-[85%] rounded-2xl px-3 py-2.5 text-sm leading-relaxed ${
                       message.sender === "user"
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "border border-border bg-white text-foreground shadow-sm"
+                        ? "bg-primary text-primary-foreground"
+                        : "border border-border bg-white text-foreground"
                     }`}
                   >
                     <div className="whitespace-pre-line">{message.text}</div>
@@ -636,11 +673,11 @@ export function MastCodeAIChatbot() {
                     {message.ctas && message.ctas.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {message.ctas.map((cta) =>
-                          cta.href ? (
+                          cta.href && !cta.href.startsWith("mailto:") ? (
                             <a
                               key={cta.label}
                               href={cta.href}
-                            className="inline-flex items-center justify-center rounded-full border border-border bg-secondary px-3 py-1.5 text-xs font-semibold text-primary transition hover:border-primary/40 hover:bg-white"
+                              className="inline-flex items-center justify-center rounded-full border border-border bg-secondary px-3 py-1.5 text-xs font-semibold text-primary transition hover:border-primary/40 hover:bg-white"
                             >
                               {cta.label}
                             </a>
@@ -648,7 +685,13 @@ export function MastCodeAIChatbot() {
                             <button
                               key={cta.label}
                               type="button"
-                              onClick={() => cta.action && handleQuickAction(cta.action)}
+                              onClick={() => {
+                                if (cta.action) {
+                                  handleQuickAction(cta.action);
+                                } else {
+                                  openLeadForm(leadTopic);
+                                }
+                              }}
                               className="inline-flex items-center justify-center rounded-full border border-border bg-secondary px-3 py-1.5 text-xs font-semibold text-primary transition hover:border-primary/40 hover:bg-white"
                             >
                               {cta.label}
@@ -663,77 +706,9 @@ export function MastCodeAIChatbot() {
                 </div>
               ))}
 
-              {showLeadForm && !submitted && (
-                <div className="rounded-2xl border border-border bg-white p-3 text-foreground shadow-sm">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary">
-                    <Sparkles className="h-4 w-4" /> Enquiry for {leadTopic}
-                  </div>
-                  <form onSubmit={handleLeadSubmit} className="space-y-3">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <input
-                        value={leadForm.name}
-                        onChange={(e) => setLeadForm((prev) => ({ ...prev, name: e.target.value }))}
-                        aria-label="Name"
-                        placeholder="Name"
-                        className="rounded-lg border border-input bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary"
-                      />
-                      <input
-                        value={leadForm.email}
-                        onChange={(e) => setLeadForm((prev) => ({ ...prev, email: e.target.value }))}
-                        aria-label="Email"
-                        type="email"
-                        placeholder="Email"
-                        className="rounded-lg border border-input bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary"
-                      />
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <input
-                        value={leadForm.phone}
-                        onChange={(e) => setLeadForm((prev) => ({ ...prev, phone: e.target.value }))}
-                        aria-label="Phone Number"
-                        placeholder="Phone Number (optional)"
-                        className="rounded-lg border border-input bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary"
-                      />
-                      <select
-                        value={leadForm.interestedService || leadTopic}
-                        onChange={(e) => setLeadForm((prev) => ({ ...prev, interestedService: e.target.value }))}
-                        aria-label="Interested Service"
-                        className="rounded-lg border border-input bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary"
-                      >
-                        <option value="">Interested Service</option>
-                        <option value="Career Guidance">Career Guidance</option>
-                        <option value="Courses & Training">Courses & Training</option>
-                        <option value="Institution Partnership">Institution Partnership</option>
-                        <option value="Business Solutions">Business Solutions</option>
-                        <option value="Website Development">Website Development</option>
-                        <option value="Digital Marketing">Digital Marketing</option>
-                      </select>
-                    </div>
-                    <textarea
-                      value={leadForm.message}
-                      onChange={(e) => setLeadForm((prev) => ({ ...prev, message: e.target.value }))}
-                      aria-label="Message"
-                      placeholder="Tell us how MastCode can help"
-                      rows={3}
-                      className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary"
-                    />
-                    <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
-                      <ShieldAlert className="h-3.5 w-3.5" />
-                      Please avoid sharing sensitive personal information.
-                    </div>
-                    <button
-                      type="submit"
-                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-accent"
-                    >
-                      <CheckCircle2 className="h-4 w-4" /> Send Enquiry
-                    </button>
-                  </form>
-                </div>
-              )}
-
               {isTyping && (
                 <div className="flex justify-start">
-                  <div className="rounded-2xl border border-border bg-white px-3 py-2.5 text-muted-foreground shadow-sm">
+                  <div className="rounded-2xl border border-border bg-white px-3 py-2.5 text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <span className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.2s]" />
                       <span className="h-2 w-2 animate-bounce rounded-full bg-primary [animation-delay:-0.05s]" />
@@ -795,11 +770,92 @@ export function MastCodeAIChatbot() {
           </div>
         </div>
 
+        <Dialog open={showLeadForm && !submitted} onOpenChange={setShowLeadForm}>
+          <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-none sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                Connect with MastCode
+              </DialogTitle>
+              <DialogDescription>
+                Share your contact details and we’ll open WhatsApp with your enquiry ready to send.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleLeadSubmit} className="space-y-3">
+              <input
+                required
+                autoComplete="name"
+                value={leadForm.name}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, name: event.target.value }))}
+                aria-label="Name"
+                placeholder="Name"
+                className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary"
+              />
+              <input
+                required
+                autoComplete="email"
+                value={leadForm.email}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, email: event.target.value }))}
+                aria-label="Email"
+                type="email"
+                placeholder="Gmail or email address"
+                className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary"
+              />
+              <input
+                required
+                autoComplete="tel"
+                inputMode="tel"
+                pattern="[0-9+()\s-]{7,20}"
+                value={leadForm.phone}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, phone: event.target.value }))}
+                aria-label="Phone number"
+                type="tel"
+                placeholder="Phone number"
+                className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary"
+              />
+              <select
+                value={leadForm.interestedService || leadTopic}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, interestedService: event.target.value }))}
+                aria-label="Interested service"
+                className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-foreground outline-none transition focus:border-primary"
+              >
+                <option value="">Interested Service</option>
+                <option value="Career Guidance">Career Guidance</option>
+                <option value="Course Enquiry">Courses &amp; Training</option>
+                <option value="Institution Partnership">Institution Partnership</option>
+                <option value="Business Solutions">Business Solutions</option>
+                <option value="Internship Enquiry">Internship Enquiry</option>
+                <option value="Website Development">Website Development</option>
+                <option value="Digital Marketing">Digital Marketing</option>
+                <option value="General Enquiry">General Enquiry</option>
+              </select>
+              <textarea
+                value={leadForm.message}
+                onChange={(event) => setLeadForm((prev) => ({ ...prev, message: event.target.value }))}
+                aria-label="Message"
+                placeholder="How can we help? (optional)"
+                rows={3}
+                className="w-full rounded-lg border border-input bg-white px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none transition focus:border-primary"
+              />
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Please avoid sharing sensitive personal information.
+              </div>
+              <button
+                type="submit"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-accent"
+              >
+                <CheckCircle2 className="h-4 w-4" /> Submit
+              </button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
         {isMinimized && (
           <button
             type="button"
             onClick={() => setIsMinimized(false)}
-            className="mt-3 flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-foreground shadow-sm"
+            className="mt-3 flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-semibold text-foreground"
           >
             <MessageSquareText className="h-4 w-4" />
             MastCode Assistant
@@ -810,4 +866,3 @@ export function MastCodeAIChatbot() {
     </>
   );
 }
-

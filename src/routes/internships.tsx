@@ -75,8 +75,8 @@ function InternshipsPage() {
                   className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-md"
                 >
                   {it.thumbnail_path && (
-                    <div className="aspect-[16/8] overflow-hidden bg-secondary">
-                      <img src={it.thumbnail_path} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none" />
+                    <div className="relative aspect-[16/8] overflow-hidden bg-secondary">
+                      <img src={it.thumbnail_path} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none" />
                     </div>
                   )}
                   <div className="flex flex-1 flex-col p-7">
@@ -106,4 +106,3 @@ function InternshipsPage() {
     </>
   );
 }
-

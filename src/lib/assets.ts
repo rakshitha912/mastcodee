@@ -6,7 +6,7 @@
 // Logo and branding
 export const ASSETS = {
   // Logo
-  LOGO: "/og/mast_code_logo_2_corrected.png",
+  LOGO: "/images/mastcode-logo.png",
 
   // Social/OG
   OG_IMAGE: "/og/mastcode-og.png",

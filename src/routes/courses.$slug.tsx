@@ -10,12 +10,8 @@ import {
   GitCommitHorizontal,
   GitPullRequest,
   GraduationCap,
-  Instagram,
-  Linkedin,
-  Mail,
   Merge,
   Network,
-  Phone,
   Search,
   UserRound,
   Workflow,
@@ -24,7 +20,7 @@ import { useEffect, useState } from "react";
 
 import { SiteFooter, SiteNav } from "@/components/site-chrome";
 import { Reveal } from "@/components/Reveal";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { TrainingContactDialog } from "@/components/TrainingContactDialog";
 import { build100DayCurriculum, fullStackCurriculum, group100DayCurriculumByWeek, type CourseMonth, type CourseWeekReport } from "@/lib/course-curricula";
 import { dataAnalysisCurriculum } from "@/lib/data-analysis-curriculum";
 import { machineLearningCurriculum } from "@/lib/machine-learning-curriculum";
@@ -673,46 +669,8 @@ function CourseDetail() {
                 : intensiveWeeks.map((week) => <WeeklyCurriculumItem key={week.week} week={week} />)}
             </div>
             <Reveal className="flex flex-wrap gap-3 pt-2">
-              <a
-                href="mailto:hello@mastcode.dev?subject=Python%20Programming%20Enrollment"
-                className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-3 font-semibold text-primary-foreground transition-colors hover:bg-accent"
-              >
-                Enroll Now
-              </a>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-3 font-semibold transition-colors hover:border-accent hover:text-accent"
-                  >
-                    <Mail className="h-4 w-4" /> Contact Us
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md rounded-xl">
-                  <DialogHeader>
-                    <DialogTitle className="font-display text-2xl">Contact MastCode</DialogTitle>
-                    <DialogDescription>Choose the contact method that works best for you.</DialogDescription>
-                  </DialogHeader>
-                  <div className="mt-2 space-y-3">
-                    <a href="tel:+917019161991" className="flex items-center gap-4 rounded-lg border border-border bg-white p-4 transition-colors hover:border-primary/40 hover:bg-secondary">
-                      <Phone className="h-5 w-5 shrink-0 text-primary" />
-                      <span><span className="block text-sm font-semibold text-foreground">Phone</span><span className="text-sm text-muted-foreground">7019161991</span></span>
-                    </a>
-                    <a href="mailto:contact@mastcode.in" className="flex items-center gap-4 rounded-lg border border-border bg-white p-4 transition-colors hover:border-primary/40 hover:bg-secondary">
-                      <Mail className="h-5 w-5 shrink-0 text-primary" />
-                      <span><span className="block text-sm font-semibold text-foreground">Email</span><span className="text-sm text-muted-foreground">contact@mastcode.in</span></span>
-                    </a>
-                    <a href="https://www.instagram.com/mastcode_ai.in/" target="_blank" rel="noreferrer" className="flex items-center gap-4 rounded-lg border border-border bg-white p-4 transition-colors hover:border-primary/40 hover:bg-secondary">
-                      <Instagram className="h-5 w-5 shrink-0 text-primary" />
-                      <span><span className="block text-sm font-semibold text-foreground">Instagram</span><span className="text-sm text-muted-foreground">@mastcode_ai.in</span></span>
-                    </a>
-                    <a href="https://www.linkedin.com/in/rakshitha-s-619496247/?isSelfProfile=true" target="_blank" rel="noreferrer" className="flex items-center gap-4 rounded-lg border border-border bg-white p-4 transition-colors hover:border-primary/40 hover:bg-secondary">
-                      <Linkedin className="h-5 w-5 shrink-0 text-primary" />
-                      <span><span className="block text-sm font-semibold text-foreground">LinkedIn</span><span className="text-sm text-muted-foreground">Rakshitha S</span></span>
-                    </a>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <TrainingContactDialog courseTitle={c.title} triggerLabel="Enroll Now" />
+              <TrainingContactDialog courseTitle={c.title} triggerLabel="Contact Us" />
               <a
                 href={`data:text/plain;charset=utf-8,${encodeURIComponent(curriculumDownload)}`}
                 download={`mastcode-${isPythonCourse ? "python" : isDataAnalysisCourse ? "data-analysis" : isMachineLearningCourse ? "machine-learning" : isArtificialIntelligenceCourse ? "artificial-intelligence" : isCloudComputingCourse ? "cloud-computing" : isGitGithubCourse ? "git-github" : "full-stack"}-curriculum.txt`}
@@ -852,5 +810,4 @@ function CurriculumDetail({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
 

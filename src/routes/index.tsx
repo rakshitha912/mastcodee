@@ -129,31 +129,20 @@ function AboutIntro() {
 
   return (
     <section className="relative overflow-hidden border-b border-border bg-white">
-      <div className="pointer-events-none absolute -left-24 bottom-[-10rem] h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute left-[38%] top-[-8rem] h-72 w-72 rounded-full bg-sky-100/80 blur-3xl" />
-      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl md:grid-cols-2">
-        <div className="mastcode-brand-panel relative flex items-center justify-center overflow-hidden border-b border-border px-6 py-12 md:border-b-0 md:border-r md:px-12 md:py-16">
-          <div className="pointer-events-none absolute left-8 top-12 grid grid-cols-5 gap-2 opacity-40" aria-hidden="true">
-            {Array.from({ length: 25 }).map((_, index) => <span key={index} className="h-1 w-1 rounded-full bg-primary" />)}
-          </div>
-          <div className="mastcode-brand-orb mastcode-brand-orb-top" aria-hidden="true" />
-          <div className="mastcode-brand-orb mastcode-brand-orb-left" aria-hidden="true" />
-          <div className="mastcode-brand-wave" aria-hidden="true" />
-          <div className="pointer-events-none absolute bottom-10 right-10 text-5xl font-light text-primary/35" aria-hidden="true">&lt;/&gt;</div>
-          <div className="relative flex w-full max-w-md items-center">
-            <img
-              src={ASSETS.LOGO}
-              alt="MastCode logo"
-              className="h-auto w-full object-contain"
-            />
-          </div>
+      <div className="grid min-h-[calc(100svh-4rem)] w-full md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="mastcode-brand-panel relative min-h-[48svh] overflow-hidden border-b border-border bg-[#f3f9ff] md:min-h-0 md:border-b-0 md:border-r">
+          <img
+            src={ASSETS.LOGO}
+            alt="MastCode logo"
+            className="absolute inset-0 h-full w-full object-cover object-center"
+          />
         </div>
-        <div className="flex items-center px-6 py-12 md:px-10 md:py-16 lg:px-14">
+        <div className="flex h-full items-center justify-center px-6 py-10 sm:px-10 md:px-6 md:py-6 lg:px-10 lg:py-8 xl:px-14">
           <div className="w-full max-w-2xl">
             <p className="inline-flex rounded-full border border-primary/10 bg-primary/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">About MastCode</p>
             <h1
               aria-label="Your Growth Partner for Skills, Careers & Business"
-              className="mt-4 max-w-xl font-display text-4xl font-bold leading-[1.08] tracking-tight md:text-5xl lg:text-6xl"
+              className="mt-3 max-w-xl font-display text-4xl font-bold leading-[1.08] tracking-tight md:text-4xl lg:text-5xl xl:text-6xl"
             >
               {headlineWords.map((word, index) => (
                 <span
@@ -166,31 +155,19 @@ function AboutIntro() {
                 </span>
               ))}
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
               MastCode helps students, professionals, institutions, and businesses move forward with practical skills, clear guidance, and digital solutions.
             </p>
-            <div className="mastcode-recruitment-callout mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/15 bg-primary/5 px-4 py-3">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex rounded-md bg-white p-2 text-primary shadow-sm" aria-hidden="true">
-                  <Briefcase className="h-4 w-4" />
-                </span>
-                <div>
-                  <p className="text-sm font-bold text-foreground">Recruitment services</p>
-                  <p className="text-xs text-muted-foreground">Straightforward, per-application pricing</p>
-                </div>
-              </div>
-              <p className="font-display text-lg font-bold text-primary">₹100 per application</p>
-            </div>
-            <div className="mt-7 grid gap-3 sm:grid-cols-3">
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
               {audienceCards.map(({ icon: Icon, title, text, tone }) => (
-                <article key={title} className="rounded-xl border border-border bg-white/80 p-4 shadow-sm backdrop-blur-sm">
+                <article key={title} className="rounded-xl border border-border bg-white/80 p-3 shadow-sm backdrop-blur-sm">
                   <span className={`inline-flex rounded-lg p-2 ${tone}`}><Icon className="h-4 w-4" /></span>
-                  <h2 className="mt-3 text-sm font-bold text-foreground">{title}</h2>
+                  <h2 className="mt-2 text-sm font-bold text-foreground">{title}</h2>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p>
                 </article>
               ))}
             </div>
-            <div className="mt-7 grid gap-4 border-t border-border pt-5 sm:grid-cols-3">
+            <div className="mt-5 grid gap-4 border-t border-border pt-4 sm:grid-cols-3">
               {highlights.map(({ icon: Icon, label, detail }) => (
                 <div key={label} className="flex gap-2.5">
                   <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -836,7 +813,9 @@ function TeamPreview() {
           {preview.map((member: any) => (
             <article key={member.id} className="overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-accent/60">
               {member.photo_path && (
-                <img src={member.photo_path} alt={member.name} loading="lazy" className="h-56 w-full object-cover" />
+                <div className="relative h-56 overflow-hidden">
+                  <img src={member.photo_path} alt={member.name} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                </div>
               )}
               <div className="p-5">
                 <h3 className="font-display text-xl font-semibold">{member.name}</h3>

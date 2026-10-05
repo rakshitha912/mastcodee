@@ -1,9 +1,10 @@
 ﻿import { Link } from "@tanstack/react-router";
-import { ArrowRight, CheckCircle2, Loader2, Menu, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Menu, X } from "lucide-react";
 import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { submitJsonForm } from "@/lib/form-submit";
+import { ASSETS } from "@/lib/assets";
 
-export const LOGO_URL = "/og/mast_code_logo_2_corrected.png";
+export const LOGO_URL = ASSETS.LOGO;
 
 const navLinks = [
   { to: "/", label: "Home" },
@@ -376,15 +377,26 @@ export function PageHero({
   title,
   highlight,
   description,
+  backToServices = false,
 }: {
   eyebrow: string;
   title: string;
   highlight: string;
   description: string;
+  backToServices?: boolean;
 }) {
   return (
     <section className="border-b border-border bg-secondary">
       <div className="relative mx-auto max-w-7xl px-6 py-20 md:py-24">
+        {backToServices && (
+          <Link
+            to="/"
+            hash="services"
+            className="mb-10 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Services
+          </Link>
+        )}
         <Reveal>
           <p className="text-sm font-semibold uppercase tracking-[0.25em] text-accent">{eyebrow}</p>
           <h1 className="mt-3 max-w-3xl font-display text-4xl font-bold tracking-tight md:text-6xl">
@@ -400,4 +412,3 @@ export function PageHero({
 }
 
 import { Reveal } from "./Reveal";
-

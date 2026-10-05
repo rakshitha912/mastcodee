@@ -170,43 +170,21 @@
 }
 
 .mastcode-brand-panel {
-  background:
-    radial-gradient(circle at 82% 16%, oklch(0.93 0.04 245 / 78%), transparent 24%),
-    linear-gradient(145deg, oklch(0.98 0.012 240), oklch(0.94 0.025 245) 54%, oklch(0.99 0.004 240));
+  background: transparent;
+}
+
+.mastcode-brand-panel img {
+  display: block;
+  max-height: 100%;
+  width: 100%;
 }
 
 .mastcode-brand-orb {
-  position: absolute;
-  border-radius: 9999px;
-  pointer-events: none;
-}
-
-.mastcode-brand-orb-top {
-  top: -5rem;
-  right: 1.5rem;
-  width: 14rem;
-  height: 14rem;
-  background: oklch(0.88 0.06 245 / 58%);
-}
-
-.mastcode-brand-orb-left {
-  top: 42%;
-  left: -2.5rem;
-  width: 5rem;
-  height: 5rem;
-  background: oklch(0.82 0.08 245 / 48%);
+  display: none;
 }
 
 .mastcode-brand-wave {
-  position: absolute;
-  right: -8%;
-  bottom: -14%;
-  left: -8%;
-  height: 28%;
-  border-radius: 50% 50% 0 0;
-  background: linear-gradient(155deg, oklch(0.78 0.09 260 / 28%), oklch(0.68 0.12 275 / 38%));
-  transform: rotate(-4deg);
-  pointer-events: none;
+  display: none;
 }
 
 .story-link {

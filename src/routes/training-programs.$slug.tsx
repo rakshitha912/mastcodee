@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { SiteFooter, SiteNav } from "@/components/site-chrome";
 import { Reveal } from "@/components/Reveal";
+import { TrainingContactDialog } from "@/components/TrainingContactDialog";
 import { trainingProgramQuery, trainingProgramWeeksQuery } from "@/lib/queries";
 import { socialMeta } from "@/lib/site";
 
@@ -82,12 +83,9 @@ function TrainingProgramDetail() {
               ))}
             </Reveal>
             <Reveal delay={220}>
-              <a
-                href="mailto:hello@mastcode.dev"
-                className="mt-8 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground transition hover:bg-accent"
-              >
-                Enroll Now
-              </a>
+              <div className="mt-8">
+                <TrainingContactDialog courseTitle={p.title} triggerLabel="Enroll Now" />
+              </div>
             </Reveal>
           </div>
         </section>
@@ -191,4 +189,3 @@ function TrainingProgramDetail() {
     </>
   );
 }
-

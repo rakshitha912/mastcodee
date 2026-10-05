@@ -50,8 +50,8 @@ function TeamsPage() {
                           alt={member.name}
                           fallbackLabel={member.name}
                           loading="lazy"
-                          containerClassName="h-full w-full"
-                          className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                          containerClassName="absolute inset-0 h-full w-full"
+                          className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                       </div>
